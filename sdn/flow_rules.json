@@ -1,0 +1,16 @@
+{
+  "sync_udp_port": 12300,
+  "bg_port": 5001,
+  "congestion_threshold_mbps": 4.0,
+  "poll_interval_sec": 2.0,
+  "qos_queues": {
+    "high_priority_sync": 1,
+    "low_priority_bg": 2,
+    "default": 0
+  },
+  "paths": {
+    "path_a_switches": [1, 2, 4],
+    "path_b_switches": [1, 3, 4]
+  }
+}
+
