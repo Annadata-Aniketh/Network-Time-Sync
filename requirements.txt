@@ -1,3 +1,9 @@
-matplotlib>=3.7.0
+# Course: UE25CS243A: Computer Networks - Team 11 (Project #23)
+# Dependencies for SDN Controller, Mininet Emulation, Socket App, and Evaluation
+
+ryu>=4.34
+eventlet>=0.30.2,<0.31.0
 pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
 pytest>=7.0.0
