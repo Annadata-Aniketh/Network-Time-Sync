@@ -27,3 +27,9 @@ class TestDemoMenu(unittest.TestCase):
                 patch('scripts.demo.run_benchmark') as run:
             menu()
             run.assert_called_once_with(duration=60, scenario='both')
+
+    def test_recovery_menu_choice(self):
+        with patch('builtins.input', side_effect=['9', '0']), patch('builtins.print'), \
+                patch('scripts.demo.run_benchmark') as run:
+            menu()
+            run.assert_called_once_with(duration=60, scenario='recovery')

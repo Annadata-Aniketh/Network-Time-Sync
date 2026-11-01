@@ -59,6 +59,33 @@ packets a dedicated bandwidth queue and switches them to the alternate path when
 primary-path traffic exceeds the configured threshold. Compare the measured
 clock error, round-trip delay, and jitter to see the effect.
 
+## Check automatic recovery
+
+Select **9 — Test automatic recovery** in the menu. Keep the duration at 60
+seconds or longer. This runs optimized mode with the following schedule:
+
+| Time | Condition |
+| --- | --- |
+| 0–20 seconds | Normal synchronization on Path A |
+| 20–40 seconds | UDP background load triggers rerouting to Path B |
+| 40–60 seconds | Load stops; the controller should restore Path A automatically |
+
+This test adds no link impairment. It checks the complete load-and-recovery
+cycle independently from the comparison experiment. A PASS requires packets on
+Path B under load, removal of reroute rules, an increasing sync request counter
+on Path A after recovery, and successful replies to all three clients during
+recovery. The runner does not manually restore any flow rules.
+
+The result appears immediately and is saved in `summary_metrics.md` and
+`recovery_check.json` in the new run directory. Select **6** to read it again.
+Comparison plots from option 5 apply to comparison runs, not recovery runs.
+
+To run this test directly:
+
+```bash
+sudo bash scripts/run_demo.sh --batch --scenario recovery --duration 60
+```
+
 ## Find your results
 
 Each run saves its output in `evaluation/runs/<timestamp>/`. The terminal prints

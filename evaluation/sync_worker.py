@@ -18,10 +18,12 @@ CSV_HEADER = [
     'path_mode', 'status',
 ]
 PHASES = ['Phase 1: Normal', 'Phase 2: iperf Congestion', 'Phase 3: NetEm Delay+Jitter']
+RECOVERY_PHASE = 'Phase 3: Recovery (load stopped)'
 
 
-def phase_at(elapsed, duration):
-    return PHASES[min(int(elapsed / (duration / 3)), 2)]
+def phase_at(elapsed, duration, recovery=False):
+    index = min(int(elapsed / (duration / 3)), 2)
+    return RECOVERY_PHASE if recovery and index == 2 else PHASES[index]
 
 
 def sample(sock, clock, client_id, seq):
@@ -52,7 +54,7 @@ def sample(sock, clock, client_id, seq):
     return row
 
 
-def run_client(server, client_id, drift, start, duration, interval, mode, output):
+def run_client(server, client_id, drift, start, duration, interval, mode, output, recovery=False):
     clock = VirtualClock(initial_offset=0.100, drift_rate=drift)
     last_rtt = None
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock, open(output, 'w', newline='') as stream:
@@ -68,7 +70,7 @@ def run_client(server, client_id, drift, start, duration, interval, mode, output
             seq += 1
             row = sample(sock, clock, client_id, seq)
             row.update(client_id=f'h_client{client_id}', elapsed_sec=elapsed,
-                       phase=phase_at(elapsed, duration), path_mode=mode)
+                       phase=phase_at(elapsed, duration, recovery), path_mode=mode)
             if row['status'] == 'SUCCESS':
                 row['jitter_ms'] = abs(row['rtt_ms'] - last_rtt) if last_rtt is not None else ''
                 last_rtt = row['rtt_ms']
@@ -92,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('--interval', type=float, required=True)
     parser.add_argument('--mode', choices=['baseline', 'optimized'], required=True)
     parser.add_argument('--output', required=True)
+    parser.add_argument('--recovery', action='store_true')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     run_client(**vars(args))

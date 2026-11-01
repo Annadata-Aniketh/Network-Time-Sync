@@ -60,10 +60,12 @@ The guide also lists D1/D2 reports and viva presentation slides; these are absen
 4. Inspect iperf logs for actual load. During phase 3, use `tc -s qdisc show dev
    s2-eth2` to confirm delay/jitter and the bandwidth hierarchy. Confirm that OVS
    QoS and TCLink shaping coexist as intended in this VM.
-5. Run a separate recovery demonstration: start the topology/controller, apply
-   background traffic, then stop it and remove impairment. After three low-load
-   polls, confirm priority-200 rules disappear while priority-10/100 rules remain.
-   The standard comparison keeps load active to its end; it does not test recovery.
+5. Select menu option 9 for the separate automatic recovery test. It runs normal
+   traffic, adds background load, then stops the load. Check the PASS/FAIL summary
+   and `recovery_check.json`: Path B must carry sync requests under load, the
+   priority-200 rules must disappear, and the Path A request counter must increase
+   afterward. The standard comparison keeps load active until the end and does
+   not exercise this recovery cycle.
 6. Generate plots from the completed run directory. Check failures and phase-wise
    behavior, repeat the comparison, and report actual results with VM details.
 7. Assemble the reports/slides with the final diagram, protocol, screenshots,

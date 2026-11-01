@@ -174,5 +174,49 @@ class TestControllerStartup(unittest.TestCase):
                 wait_for_controller(process)
 
 
+class TestRecoveryEvidence(unittest.TestCase):
+    def test_phase_label_for_recovery(self):
+        from evaluation.sync_worker import RECOVERY_PHASE
+        self.assertEqual(phase_at(40, 60, recovery=True), RECOVERY_PHASE)
+        self.assertIn('NetEm', phase_at(40, 60))
+
+    def test_recovery_requires_all_packet_evidence(self):
+        from evaluation.benchmark import verify_recovery
+        from evaluation.sync_worker import RECOVERY_PHASE
+        for case in ['pass', 'no-reroute', 'rules-remain', 'no-return-traffic', 'missing-client']:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                logs = root / 'optimized'
+                logs.mkdir()
+                reroute = 'n_packets=20, priority=200,udp,tp_dst=12300 actions=output:6\n'
+                original = 'n_packets=10, priority=100,udp,tp_dst=12300 actions=set_queue:1,output:5\n'
+                restored = original.replace('n_packets=10', 'n_packets=30')
+                (logs / 'phase2-s1-flows.txt').write_text(original + (reroute if case != 'no-reroute' else ''))
+                (logs / 'phase3-s1-flows.txt').write_text(original if case == 'no-return-traffic' else restored)
+                for switch in ['s3', 's4']:
+                    (logs / f'phase3-{switch}-flows.txt').write_text('priority=10 actions=output:1\n')
+                if case == 'rules-remain':
+                    (logs / 'phase3-s3-flows.txt').write_text(reroute)
+                rows = [dict(client_id=f'h_client{client}', phase=RECOVERY_PHASE, status='SUCCESS')
+                        for client in range(1, 4 if case != 'missing-client' else 3)]
+                with patch('builtins.print'):
+                    if case == 'pass':
+                        result = verify_recovery(root, rows)
+                        self.assertTrue(result['passed'])
+                        self.assertEqual(result['path_a_packets_after'], 30)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, 'not verified'):
+                            verify_recovery(root, rows)
+                self.assertTrue((root / 'recovery_check.json').exists())
+                self.assertIn('PASS' if case == 'pass' else 'FAIL', (root / 'summary_metrics.md').read_text())
+
+    def test_short_recovery_test_rejected_before_startup(self):
+        from evaluation.benchmark import run_benchmark
+        with patch('evaluation.benchmark.check_environment') as check:
+            with self.assertRaisesRegex(ValueError, 'at least 60 seconds'):
+                run_benchmark(scenario='recovery', duration=9)
+            check.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

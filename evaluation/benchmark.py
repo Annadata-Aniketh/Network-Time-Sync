@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -17,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from evaluation.sync_worker import CSV_HEADER, PHASES
+from evaluation.sync_worker import CSV_HEADER, PHASES, RECOVERY_PHASE
 
 DATA_DIR = REPO_ROOT / 'evaluation' / 'runs'
 CLIENT_DRIFTS = [0.020, -0.015, 0.030]
@@ -93,7 +94,7 @@ def check_connectivity(net, log):
     return loss
 
 
-def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_sec=0.5):
+def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_sec=0.5, recovery=False):
     from mininet.net import Mininet
     from mininet.node import RemoteController, OVSSwitch
     from mininet.link import TCLink
@@ -161,17 +162,25 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
                 '--drift', str(drift), '--start', str(start), '--duration', str(duration_sec),
                 '--interval', str(interval_sec), '--mode', mode,
                 '--output', str(output_dir / f'client{client_id}.csv'),
+                *(['--recovery'] if recovery else []),
             ], f'client{client_id}', net.get(f'h_client{client_id}')))
 
         for phase in range(3):
             time.sleep(max(0, start + phase * duration_sec / 3 - time.monotonic()))
-            logging.info('%s: %s', mode, PHASES[phase])
+            label = RECOVERY_PHASE if recovery and phase == 2 else PHASES[phase]
+            logging.info('%s: %s', mode, label)
             if phase == 1:
                 traffic = launch(['iperf', '-c', '10.0.0.2', '-u', '-p', '5001', '-b', '12M',
                         '-t', str(math.ceil(duration_sec * 2 / 3))],
                        'traffic-source', net.get('h_load'))
             elif phase == 2:
-                inject_link_impairment(net, delay_ms=50, jitter_ms=15)
+                if recovery:
+                    if traffic.poll() is not None:
+                        raise RuntimeError('Background traffic stopped before recovery; see traffic-source.log.')
+                    stop_process(traffic)
+                    logging.info('Load stopped; waiting for automatic Path A recovery.')
+                else:
+                    inject_link_impairment(net, delay_ms=50, jitter_ms=15)
             # Save flow counters near the end of each phase, after controller polls.
             time.sleep(max(0, start + (phase + 1) * duration_sec / 3 - 0.2 - time.monotonic()))
             if controller.poll() is not None:
@@ -181,7 +190,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
         for worker in workers:
             if worker.wait(timeout=5) != 0:
                 raise RuntimeError('Client failed; see client logs.')
-        if traffic is not None and traffic.wait(timeout=5) != 0:
+        if traffic is not None and not recovery and traffic.wait(timeout=5) != 0:
             raise RuntimeError('Background traffic failed; see traffic-source.log.')
         records = []
         for client_id in range(1, 4):
@@ -202,11 +211,59 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             log.close()
 
 
+def sync_request_count(path, priority, port):
+    """Read the UDP sync request counter for a specific rule from an OVS dump."""
+    for line in Path(path).read_text().splitlines():
+        if (re.search(rf'\bpriority={priority}(?:,|\s)', line)
+                and re.search(r'\btp_dst=12300\b', line)
+                and re.search(rf'\boutput:{port}(?:,|\s|$)', line)):
+            match = re.search(r'\bn_packets=(\d+)', line)
+            if match:
+                return int(match.group(1))
+    return None
+
+
+def verify_recovery(output_dir, records):
+    """Require packet evidence for both the reroute and the return to Path A."""
+    output_dir = Path(output_dir)
+    logs = output_dir / 'optimized'
+    path_b = sync_request_count(logs / 'phase2-s1-flows.txt', 200, 6)
+    before = sync_request_count(logs / 'phase2-s1-flows.txt', 100, 5)
+    after = sync_request_count(logs / 'phase3-s1-flows.txt', 100, 5)
+    checks = {
+        'Sync requests used Path B under load': path_b is not None and path_b > 0,
+        'Reroute rules removed from s1, s3, and s4': all(
+            not re.search(r'\bpriority=200(?:,|\s)', (logs / f'phase3-{switch}-flows.txt').read_text())
+            for switch in ['s1', 's3', 's4']),
+        'Sync request counter increased on Path A after load stopped':
+            before is not None and after is not None and after > before,
+        'All three clients received replies during recovery': all(
+            any(row['client_id'] == f'h_client{client}' and row['phase'] == RECOVERY_PHASE
+                and row['status'] == 'SUCCESS' for row in records) for client in range(1, 4)),
+    }
+    passed = all(checks.values())
+    result = dict(passed=passed, checks=checks, path_b_packets=path_b,
+                  path_a_packets_before=before, path_a_packets_after=after)
+    (output_dir / 'recovery_check.json').write_text(json.dumps(result, indent=2) + '\n')
+    lines = ['# Automatic recovery: ' + ('PASS' if passed else 'FAIL'), '']
+    lines += [f'- {"PASS" if ok else "FAIL"}: {label}' for label, ok in checks.items()]
+    summary = '\n'.join(lines) + '\n'
+    (output_dir / 'summary_metrics.md').write_text(summary)
+    print(summary)
+    if not passed:
+        raise RuntimeError(f'Recovery was not verified; inspect {output_dir / "recovery_check.json"}')
+    return result
+
+
 def run_benchmark(output_dir=None, duration=60, interval=0.5, scenario='both'):
     if not math.isfinite(duration) or duration < 9:
         raise ValueError('Duration must be at least 9 seconds (three controller polling phases).')
     if not math.isfinite(interval) or interval <= 0:
         raise ValueError('Interval must be positive and finite.')
+    if scenario not in ['baseline', 'optimized', 'both', 'recovery']:
+        raise ValueError('Unknown scenario')
+    if scenario == 'recovery' and duration < 60:
+        raise ValueError('Use at least 60 seconds for the recovery test.')
     check_environment()
     output_dir = Path(output_dir or DATA_DIR / time.strftime('%Y%m%d-%H%M%S')).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -218,13 +275,19 @@ def run_benchmark(output_dir=None, duration=60, interval=0.5, scenario='both'):
                     status='running')
     metadata_path = output_dir / 'run.json'
     metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
-    modes = ['baseline', 'optimized'] if scenario == 'both' else [scenario]
+    if scenario == 'both':
+        modes = ['baseline', 'optimized']
+    else:
+        modes = ['optimized' if scenario == 'recovery' else scenario]
     logging.info('Saving logs and evidence to %s', output_dir)
     try:
         for mode in modes:
-            records = run_benchmark_scenario_mininet(mode, output_dir / mode, duration, interval)
+            records = run_benchmark_scenario_mininet(mode, output_dir / mode, duration, interval,
+                                                     recovery=scenario == 'recovery')
             name = 'baseline_metrics.csv' if mode == 'baseline' else 'sdn_optimized_metrics.csv'
             write_csv(output_dir / name, records)
+            if scenario == 'recovery':
+                verify_recovery(output_dir, records)
         metadata['status'] = 'complete'
     except BaseException:
         metadata['status'] = 'incomplete'
@@ -240,7 +303,7 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir')
     parser.add_argument('--duration', type=float, default=60)
     parser.add_argument('--interval', type=float, default=0.5)
-    parser.add_argument('--scenario', choices=['baseline', 'optimized', 'both'], default='both')
+    parser.add_argument('--scenario', choices=['baseline', 'optimized', 'both', 'recovery'], default='both')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     try:

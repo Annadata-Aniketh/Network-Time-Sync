@@ -38,6 +38,7 @@ Linux VM / Mininet / OS-Ken
   6  Show summary
   7  Set duration (currently {duration:g}s per scenario)
   8  Run tests
+  9  Test automatic recovery (stop load and return to Path A)
   0  Exit
 
 Results: {latest or 'no run selected'}''')
@@ -48,8 +49,8 @@ Results: {latest or 'no run selected'}''')
             if choice == '1':
                 check_environment()
                 print('Environment checks passed.')
-            elif choice in ['2', '3', '4']:
-                scenario = {'2': 'baseline', '3': 'optimized', '4': 'both'}[choice]
+            elif choice in ['2', '3', '4', '9']:
+                scenario = {'2': 'baseline', '3': 'optimized', '4': 'both', '9': 'recovery'}[choice]
                 latest = run_benchmark(duration=duration, scenario=scenario)
             elif choice in ['5', '6']:
                 entered = input(f'Results directory [{latest or "required"}]: ').strip()
@@ -80,7 +81,7 @@ Results: {latest or 'no run selected'}''')
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--batch', action='store_true', help='Run without the menu')
-    parser.add_argument('--scenario', choices=['baseline', 'optimized', 'both'], default='both')
+    parser.add_argument('--scenario', choices=['baseline', 'optimized', 'both', 'recovery'], default='both')
     parser.add_argument('--duration', type=float, default=60)
     parser.add_argument('--interval', type=float, default=0.5)
     parser.add_argument('--output-dir')
