@@ -9,19 +9,21 @@ Reviewed against `Reference docs/SDN-Socket Programming-Guidelines_Rubrics.pdf`
 | Deliverable | Marks | Current coverage | Evidence still needed |
 | --- | ---: | --- | --- |
 | D1: Problem and architecture | 2 | Protocol, topology, objectives, and communication flow documented | Confirm diagrams match final VM implementation |
-| D1: UDP sockets | 4 | Binary request/reply, concurrent server, virtual clocks, timeout logging | Demonstrate three clients in Mininet |
-| D1: Mininet + SDN | 4 | Four-switch diamond, fixed addressing, OpenFlow controller, queue configuration | Successful connectivity and queue checks in the actual VM |
+| D1: UDP sockets | 4 | Binary request/reply, concurrent server, virtual clocks, timeout logging | Screenshots show three client reply counters; inspect raw client logs |
+| D1: Mininet + SDN | 4 | Four-switch diamond, fixed addressing, OpenFlow controller, queue configuration | VM reports 30/30 connectivity and queue setup; inspect raw qdisc/queue dumps |
 | D1: Socket–SDN integration | 3 | Persistent client processes inside host namespaces; UDP classification | Flow counters or packet capture showing application traffic on the selected path |
-| D1: Initial tests and demo | 2 | Protocol/clock/socket tests and menu available | Complete normal-operation VM run |
+| D1: Initial tests and demo | 2 | Protocol/clock/socket tests and menu available | Comparisons completed in VM; raw logs pending |
 | D2: Complete application | 4 | Three drifting virtual clocks, periodic correction, structured CSV logs | Verify all clients complete and inspect failures |
-| D2: Dynamic SDN | 6 | Load-based rerouting, queue assignment, three-poll recovery | Logs and flow counters proving transition and recovery |
+| D2: Dynamic SDN | 6 | Load-based rerouting, queue assignment, three-poll recovery | Reroute counter and recovery PASS screenshots supplied; inspect raw dumps |
 | D2: Challenging scenario | 4 | 12 Mbps offered load plus forward delay/jitter | Verify iperf delivery, `tc` settings, and behavior under impairment |
-| D2: Performance comparison | 5 | Matched baseline/optimized schedule; RTT, jitter, error, failures, convergence plots | Fresh VM runs with parameters and raw logs; repeated trials for variability |
+| D2: Performance comparison | 5 | Matched baseline/optimized schedule; RTT, jitter, error, failures, convergence plots | Three repeated summaries supplied; inspect raw measurements |
 | D2: Docs, demo, viva | 6 | README, interactive demo, code map, explanation below | Final architecture/report and presentation; individual walkthrough |
 
-The major implementation pieces exist. The mandatory **deployed and tested in
-Mininet** requirement remains unverified here. Legacy charts do not establish it.
-The guide also lists D1/D2 reports and viva presentation slides; these are absent.
+The user has supplied VM screenshots of completed comparisons and automatic
+recovery. See [the validation record](vm_validation.md) and
+[the report draft](project_report.md). Raw VM logs/CSVs still need transfer and
+review. The report draft is available; final report exports and presentation
+remain unfinished. Legacy charts are not used as current VM evidence.
 
 ## Problems addressed on this branch
 
@@ -43,13 +45,13 @@ The guide also lists D1/D2 reports and viva presentation slides; these are absen
   retained bandwidth setting. Inspect the resulting qdisc tree in the VM.
 - Background load now lasts through the impaired phase at every chosen duration.
 - The macOS/local proxy fallback was removed. Runs require Linux, root, Mininet,
-  OVS, iperf, and an importable Ryu runtime.
+  OVS, iperf, and an importable OS-Ken runtime.
 - The README and plotting code no longer promise fixed improvements, sub-ms
   accuracy, or a reroute timestamp that was never measured.
 
 ## Linux VM acceptance checklist
 
-1. Record the VM OS, Python, Ryu, Mininet, and OVS versions. Run the menu's
+1. Record the VM OS, Python, OS-Ken, Mininet, and OVS versions. Run the menu's
    environment check. Controller/Eventlet compatibility with that Python must be verified;
    installing packages alone does not establish controller functionality.
 2. Run all tests. Then run the baseline and optimized comparison for 60 seconds

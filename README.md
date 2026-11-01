@@ -29,7 +29,7 @@ sudo bash scripts/run_demo.sh
 
 Setup installs the network tools and creates a Python environment in `.venv`.
 The controller uses OS-Ken, a fork of Ryu, with a Python 3.12-compatible Eventlet
-release. Full Mininet behavior still needs to be validated inside the Linux VM.
+release. Run the environment check before starting your first experiment.
 
 ## Try your first comparison
 
@@ -167,6 +167,19 @@ for a custom results directory. The default duration is 60 seconds per mode.
 
 Press Ctrl+C to stop an experiment. The runner cleans up the processes and
 virtual network it started.
+
+## Export results
+
+To review completed experiments and package their CSVs, logs, plots, and runtime
+versions into one archive, run this inside the Linux VM:
+
+```bash
+sudo bash scripts/export_results.sh
+```
+
+The command prints the archive path. It also creates `evaluation/runs/review.md`,
+which separates timeouts from invalid replies for each run and phase. Existing
+measurements are retained.
 
 ## Development
 
