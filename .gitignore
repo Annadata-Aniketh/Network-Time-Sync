@@ -5,3 +5,5 @@ data/*.csv
 plots/*.png
 .venv/
 evaluation/runs/
+
+tmp/

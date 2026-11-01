@@ -192,3 +192,7 @@ Run the tests:
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
 ```
+
+The [technical report](docs/project_report.md) explains the implementation and
+recorded VM results. The [presentation](docs/network-time-sync.pptx) provides an
+editable walkthrough of the same evidence.

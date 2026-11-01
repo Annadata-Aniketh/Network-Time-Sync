@@ -1,23 +1,24 @@
 # VM validation record
 
-Evidence supplied by the user on 2026-11-01. Screenshots are saved in `evidence/`.
-Raw files remain in the VM and have not been independently inspected here.
+Raw archive supplied by the user on 2026-11-01 and audited locally. The original
+archive is preserved as `evidence/vm-results-20261101-195256.tar.gz`.
 
-| Check | Current evidence | Status |
+| Check | Evidence reviewed | Result |
 | --- | --- | --- |
-| Host connectivity | VM console reports 30/30 pairs reachable | Observed in screenshots |
-| UDP clients | Completed benchmark summaries; reply counters for three clients | Observed; raw logs pending |
-| Repeated comparison | Runs 191520, 192057, 192459 with generated summaries | Observed; raw CSV audit pending |
-| Dynamic rerouting | Run 190534: 6.01 Mbps trigger, 102 requests via port 6 | Observed in saved flow screenshot |
-| Automatic recovery | Run 194117: all four packet/rule/client checks PASS | Observed; raw dumps pending |
-| Automated tests | 53 local Python 3.12 tests passed, including the results review | Local result; VM suite output not supplied |
-| Runtime versions | Python 3.12 shown during setup; other exact installed versions not captured | Export required |
-| Actual offered/delivered traffic and qdiscs | Snapshots collected by runner | Raw file audit pending |
-| Timeout versus invalid samples | Summary only shows combined failures | Raw file audit pending |
+| UDP clients and host connectivity | Connectivity logs and client/server records | All normal samples succeed; all six hosts reachable |
+| Comparison repeatability | Five completed comparisons with 60 seconds per mode | All stored summaries match recomputation |
+| Application failures | CSV status counts and server sequence logs | Baseline: 393 timeouts, zero invalid; optimized: zero failures |
+| Dynamic rerouting | Phase-2 s1 flow counters and controller logs for each run | Path B requests observed in every optimized comparison |
+| Automatic recovery | Run 194117 raw flow dumps and client CSV | PASS on independent re-evaluation |
+| Load and impairment | iperf logs, OVS queue records, and qdisc snapshots | Offered UDP load, queue rate settings, 50 ms / 15 ms netem present |
+| Runtime | environment.txt | Linux Mint 22.3; Python 3.12.3; OS-Ken 2.11.2; Mininet 2.3.0 |
+| Automated tests | Local Python 3.12 suite | 53 tests passed before documentation/deck work; VM suite output not supplied |
 
-The original comparison run 190534 is additional evidence; the three repeated
-runs in the report are 191520, 192057, and 192459. Recovery is a separate scenario.
+Comparisons: 190534, 191520, 192057, 192459, 193256. Recovery: 194117.
+Four incomplete attempts are excluded from quantitative comparisons but retained
+in the original archive. The environment was recorded at export, not before each
+individual run. No packet captures establish the exact location of request loss.
 
-Use `scripts/export_results.sh` to review and bundle all raw records. The archive
-includes failed/incomplete runs as well; the generated comparison review excludes
-them and lists their names.
+Run `docs/build_results.py` to reproduce the review. Full findings and limits are
+in [the project report](project_report.md); machine-readable evidence is in
+[the audit](results/audit.json).

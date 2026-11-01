@@ -9,21 +9,21 @@ Reviewed against `Reference docs/SDN-Socket Programming-Guidelines_Rubrics.pdf`
 | Deliverable | Marks | Current coverage | Evidence still needed |
 | --- | ---: | --- | --- |
 | D1: Problem and architecture | 2 | Protocol, topology, objectives, and communication flow documented | Confirm diagrams match final VM implementation |
-| D1: UDP sockets | 4 | Binary request/reply, concurrent server, virtual clocks, timeout logging | Screenshots show three client reply counters; inspect raw client logs |
-| D1: Mininet + SDN | 4 | Four-switch diamond, fixed addressing, OpenFlow controller, queue configuration | VM reports 30/30 connectivity and queue setup; inspect raw qdisc/queue dumps |
-| D1: Socket–SDN integration | 3 | Persistent client processes inside host namespaces; UDP classification | Flow counters or packet capture showing application traffic on the selected path |
-| D1: Initial tests and demo | 2 | Protocol/clock/socket tests and menu available | Comparisons completed in VM; raw logs pending |
-| D2: Complete application | 4 | Three drifting virtual clocks, periodic correction, structured CSV logs | Verify all clients complete and inspect failures |
-| D2: Dynamic SDN | 6 | Load-based rerouting, queue assignment, three-poll recovery | Reroute counter and recovery PASS screenshots supplied; inspect raw dumps |
-| D2: Challenging scenario | 4 | 12 Mbps offered load plus forward delay/jitter | Verify iperf delivery, `tc` settings, and behavior under impairment |
-| D2: Performance comparison | 5 | Matched baseline/optimized schedule; RTT, jitter, error, failures, convergence plots | Three repeated summaries supplied; inspect raw measurements |
-| D2: Docs, demo, viva | 6 | README, interactive demo, code map, explanation below | Final architecture/report and presentation; individual walkthrough |
+| D1: UDP sockets | 4 | Binary request/reply, concurrent server, virtual clocks, timeout logging | Raw client/server logs checked |
+| D1: Mininet + SDN | 4 | Four-switch diamond, fixed addressing, OpenFlow controller, queue configuration | Connectivity logs and shaping snapshots checked |
+| D1: Socket–SDN integration | 3 | Persistent client processes inside host namespaces; UDP classification | Flow counters checked; no packet captures supplied |
+| D1: Initial tests and demo | 2 | Protocol/clock/socket tests and menu available | Five comparisons completed; raw logs reviewed |
+| D2: Complete application | 4 | Three drifting virtual clocks, periodic correction, structured CSV logs | Failure breakdown audited; all optimized samples succeed |
+| D2: Dynamic SDN | 6 | Load-based rerouting, queue assignment, three-poll recovery | Raw reroute counters and recovery checks reviewed |
+| D2: Challenging scenario | 4 | 12 Mbps offered load plus forward delay/jitter | iperf and qdisc snapshots reviewed |
+| D2: Performance comparison | 5 | Matched baseline/optimized schedule; RTT, jitter, error, failures, convergence plots | Five raw comparisons recalculated; report records measurement limits |
+| D2: Docs, demo, viva | 6 | README, interactive demo, code map, explanation below | Report and presentation prepared; individual walkthrough still needed |
 
-The user has supplied VM screenshots of completed comparisons and automatic
-recovery. See [the validation record](vm_validation.md) and
-[the report draft](project_report.md). Raw VM logs/CSVs still need transfer and
-review. The report draft is available; final report exports and presentation
-remain unfinished. Legacy charts are not used as current VM evidence.
+Five comparison runs and a separate recovery run have been reviewed from the raw
+VM archive. All five stored summaries match recalculation, rerouting counters are
+present, and recovery independently passes. See [the validation record](vm_validation.md)
+and [the project report](project_report.md). This verifies the demonstrated core
+behavior; it is not a promise of marks or production readiness.
 
 ## Problems addressed on this branch
 
