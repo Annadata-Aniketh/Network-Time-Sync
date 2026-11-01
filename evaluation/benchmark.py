@@ -36,7 +36,7 @@ def check_environment():
         except OSError as error:
             raise RuntimeError('Controller port 6653 is already in use.') from error
     # Check the same interpreter that will run the controller and clients.
-    subprocess.run([sys.executable, '-c', 'import mininet.net; import ryu.cmd.manager'], check=True)
+    subprocess.run([sys.executable, '-c', 'import mininet.net; import os_ken.cmd.manager'], check=True)
     subprocess.run(['ovs-vsctl', 'show'], check=True, stdout=subprocess.DEVNULL)
 
 
@@ -91,7 +91,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             subprocess.run(['ovs-vsctl', 'list', 'Queue'], stdout=stream, check=True)
 
     try:
-        controller = launch([sys.executable, '-m', 'ryu.cmd.manager',
+        controller = launch([sys.executable, '-m', 'sdn.run_controller',
                              '--ofp-tcp-listen-port', '6653', 'sdn/controller.py'], 'controller')
         net = Mininet(topo=TimeSyncTopo(), controller=None, switch=OVSSwitch, link=TCLink)
         net.addController('c0', controller=RemoteController, ip='127.0.0.1', port=6653)

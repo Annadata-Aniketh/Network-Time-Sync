@@ -13,16 +13,16 @@ import time
 import logging
 
 try:
-    from ryu.base import app_manager
-    from ryu.controller import ofp_event
-    from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
-    from ryu.ofproto import ofproto_v1_3
-    from ryu.lib.packet import packet, ethernet, ether_types, arp, ipv4, udp, tcp
-    from ryu.lib import hub
+    from os_ken.base import app_manager
+    from os_ken.controller import ofp_event
+    from os_ken.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
+    from os_ken.ofproto import ofproto_v1_3
+    from os_ken.lib.packet import packet, ethernet, ether_types, arp, ipv4, udp, tcp
+    from os_ken.lib import hub
 except ImportError:
-    # Graceful fallback mock classes for local dev / testing on environments without Ryu (e.g. macOS)
+    # Graceful fallback mock classes for local dev / testing on environments without OS-Ken (e.g. macOS)
     class app_manager:
-        class RyuApp:
+        class OSKenApp:
             def __init__(self, *args, **kwargs):
                 self.logger = logging.getLogger("SDNController")
 
@@ -63,7 +63,7 @@ HOST_MAP = {
 }
 
 
-class TimeSyncSDNController(app_manager.RyuApp):
+class TimeSyncSDNController(app_manager.OSKenApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     HOST_MAP = HOST_MAP
 
@@ -189,7 +189,7 @@ class TimeSyncSDNController(app_manager.RyuApp):
         else:
             self._install_optimized_flows(datapath)
 
-        # Spawn real-time monitoring thread on Ryu hub once in optimized mode
+        # Spawn real-time monitoring thread on the controller hub once in optimized mode
         if self.mode == "optimized" and not self.monitor_started:
             self.monitor_started = True
             hub.spawn(self._monitor_loop)

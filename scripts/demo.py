@@ -28,7 +28,7 @@ def menu():
     while True:
         print(f'''
 Network Time Synchronization | Team 11
-Linux VM / Mininet / Ryu
+Linux VM / Mininet / OS-Ken
 
   1  Check environment
   2  Run baseline (Path A, best effort)

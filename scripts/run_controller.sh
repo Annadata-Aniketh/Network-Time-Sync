@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Script: run_controller.sh
-# Purpose: Launch Ryu OpenFlow 1.3 Controller for Network Time Synchronization
+# Purpose: Launch OS-Ken OpenFlow 1.3 Controller for Network Time Synchronization
 # Course: UE25CS243A - Computer Networks (Team 11 - Project #23)
 # ==============================================================================
 
@@ -60,16 +60,17 @@ if [[ "$MODE" != "baseline" && "$MODE" != "optimized" ]]; then
 fi
 
 export SDN_MODE="$MODE"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 echo "============================================================"
-echo " Starting Team 11 Ryu OpenFlow 1.3 SDN Controller"
+echo " Starting Team 11 OS-Ken OpenFlow 1.3 SDN Controller"
 echo " Mode        : $SDN_MODE"
 echo " Listen Port : $PORT"
 echo " App Path    : $CONTROLLER_APP"
 echo "============================================================"
 
-if command -v ryu-manager &> /dev/null; then
-  exec ryu-manager --ofp-tcp-listen-port "$PORT" $VERBOSE "$CONTROLLER_APP"
-else
-  exec python3 -m ryu.cmd.manager --ofp-tcp-listen-port "$PORT" $VERBOSE "$CONTROLLER_APP"
+PYTHON_CMD=python3
+if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+  PYTHON_CMD="$REPO_ROOT/.venv/bin/python"
 fi
+exec "$PYTHON_CMD" -m sdn.run_controller --ofp-tcp-listen-port "$PORT" $VERBOSE "$CONTROLLER_APP"

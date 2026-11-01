@@ -50,7 +50,7 @@ The guide also lists D1/D2 reports and viva presentation slides; these are absen
 ## Linux VM acceptance checklist
 
 1. Record the VM OS, Python, Ryu, Mininet, and OVS versions. Run the menu's
-   environment check. Ryu/Eventlet compatibility with that Python must be verified;
+   environment check. Controller/Eventlet compatibility with that Python must be verified;
    installing packages alone does not establish controller functionality.
 2. Run all tests. Then run the baseline and optimized comparison for 60 seconds
    per scenario. Inspect every client's log for successful replies in all phases.
@@ -85,3 +85,10 @@ together and that a faster alternate path is part of this topology.
 For limitations, explain UDP loss, the symmetric-delay assumption, step corrections,
 shared-clock ground truth, large artificial drift rates, scheduler timing, and
 why these results do not establish production NTP accuracy.
+
+## Controller runtime update
+
+OS-Ken 2.11.2 replaces the unmaintained Ryu package to avoid its Setuptools
+installation hook. Controller imports and launcher use `os_ken`; the OpenFlow
+policy is unchanged. Eventlet is updated for Python 3.12. OS-Ken is a Ryu fork,
+so describe that runtime choice explicitly in the final documentation.

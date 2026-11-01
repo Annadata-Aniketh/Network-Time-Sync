@@ -11,7 +11,7 @@ system time stays unchanged.
 
 You'll need an Ubuntu or Debian-based Linux VM with Python 3, Git, an internet
 connection for setup, and sudo access. Mininet creates the virtual network;
-Open vSwitch forwards packets, and Ryu controls their paths.
+Open vSwitch forwards packets, and OS-Ken controls their paths.
 
 Clone the repository inside the VM:
 
@@ -28,9 +28,8 @@ sudo bash scripts/run_demo.sh
 ```
 
 Setup installs the network tools and creates a Python environment in `.venv`.
-Ryu and the pinned Eventlet dependency need a compatible Python runtime. If setup
-fails, resolve that error before starting an experiment; the full setup has not
-yet been verified on the target VM.
+The controller uses OS-Ken, a fork of Ryu, with a Python 3.12-compatible Eventlet
+release. Full Mininet behavior still needs to be validated inside the Linux VM.
 
 ## Try your first comparison
 

@@ -16,6 +16,7 @@ service openvswitch-switch start
 if [[ ! -x .venv/bin/python ]]; then
     python3 -m venv --system-site-packages .venv
 fi
+.venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -c 'import mininet.net; import ryu.cmd.manager; import pandas; import matplotlib'
+.venv/bin/python -c 'import mininet.net; import os_ken.cmd.manager; import pandas; import matplotlib'
 echo 'Dependencies imported successfully. Start the menu: sudo bash scripts/run_demo.sh'

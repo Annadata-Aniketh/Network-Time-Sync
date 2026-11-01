@@ -1,8 +1,6 @@
-# Course: UE25CS243A: Computer Networks - Team 11 (Project #23)
-# Dependencies for SDN Controller, Mininet Emulation, Socket App, and Evaluation
-
-ryu>=4.34
-eventlet>=0.30.2,<0.31.0
+# Controller runtime and result analysis (Python 3.12).
+os-ken==2.11.2
+eventlet>=0.40.3,<0.41
 pandas>=2.0.0
 numpy>=1.24.0
 matplotlib>=3.7.0
