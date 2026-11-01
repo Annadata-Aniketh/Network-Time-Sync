@@ -93,6 +93,9 @@ clients ─────── s1              s4 ─────── reference
                    alternate path
 ```
 
+The background traffic hosts are named `h_load` and `h_sink` so their generated
+interface names fit Linux's 15-character limit.
+
 Three clients periodically exchange timestamps with the server over UDP port
 12300. Each client estimates the network round-trip delay and its clock offset,
 then adds the offset to its virtual clock.

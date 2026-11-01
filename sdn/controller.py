@@ -55,11 +55,11 @@ DEFAULT_POLL_INTERVAL = 2.0
 # Deterministic Host Map (IP -> MAC, switch DPID, switch port)
 HOST_MAP = {
     '10.0.0.1':  {'mac': '00:00:00:00:00:01', 'dpid': 4, 'port': 1, 'name': 'h_server'},
-    '10.0.0.2':  {'mac': '00:00:00:00:00:02', 'dpid': 4, 'port': 2, 'name': 'h_bg_server'},
+    '10.0.0.2':  {'mac': '00:00:00:00:00:02', 'dpid': 4, 'port': 2, 'name': 'h_sink'},
     '10.0.0.11': {'mac': '00:00:00:00:00:11', 'dpid': 1, 'port': 1, 'name': 'h_client1'},
     '10.0.0.12': {'mac': '00:00:00:00:00:12', 'dpid': 1, 'port': 2, 'name': 'h_client2'},
     '10.0.0.13': {'mac': '00:00:00:00:00:13', 'dpid': 1, 'port': 3, 'name': 'h_client3'},
-    '10.0.0.20': {'mac': '00:00:00:00:00:20', 'dpid': 1, 'port': 4, 'name': 'h_bg_client'},
+    '10.0.0.20': {'mac': '00:00:00:00:00:20', 'dpid': 1, 'port': 4, 'name': 'h_load'},
 }
 
 

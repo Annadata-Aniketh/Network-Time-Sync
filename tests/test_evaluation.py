@@ -95,6 +95,35 @@ class TestResults(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 load_datasets(directory)
 
+class TestMininetStartupCleanup(unittest.TestCase):
+    def test_failed_build_stops_partial_network_and_controller(self):
+        import sys
+        import types
+        from evaluation.benchmark import run_benchmark_scenario_mininet
+
+        network = Mock()
+        network.build.side_effect = Exception('interface creation failed')
+        constructor = Mock(return_value=network)
+        net_module = types.ModuleType('mininet.net')
+        net_module.Mininet = constructor
+        node_module = types.ModuleType('mininet.node')
+        node_module.RemoteController = Mock()
+        node_module.OVSSwitch = Mock()
+        link_module = types.ModuleType('mininet.link')
+        link_module.TCLink = Mock()
+        process = Mock()
+        process.poll.return_value = None
+        modules = {'mininet.net': net_module, 'mininet.node': node_module, 'mininet.link': link_module}
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(sys.modules, modules), \
+                patch('evaluation.benchmark.subprocess.Popen', return_value=process):
+            with self.assertRaisesRegex(RuntimeError, 'interface creation failed'):
+                run_benchmark_scenario_mininet('baseline', directory)
+        self.assertFalse(constructor.call_args.kwargs['build'])
+        network.stop.assert_called_once()
+        process.terminate.assert_called_once()
+        network.start.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

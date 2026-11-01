@@ -93,8 +93,10 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
     try:
         controller = launch([sys.executable, '-m', 'sdn.run_controller',
                              '--ofp-tcp-listen-port', '6653', 'sdn/controller.py'], 'controller')
-        net = Mininet(topo=TimeSyncTopo(), controller=None, switch=OVSSwitch, link=TCLink)
+        # Assign the network before building so a partial build can be stopped.
+        net = Mininet(topo=TimeSyncTopo(), controller=None, switch=OVSSwitch, link=TCLink, build=False)
         net.addController('c0', controller=RemoteController, ip='127.0.0.1', port=6653)
+        net.build()
         net.start()
         if not net.waitConnected(timeout=10) or controller.poll() is not None:
             raise RuntimeError('Controller connection failed; see controller.log.')
@@ -104,7 +106,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             raise RuntimeError('Host connectivity check failed.')
 
         server = launch([sys.executable, '-m', 'app.server'], 'server', net.get('h_server'))
-        sink = launch(['iperf', '-s', '-u', '-p', '5001'], 'traffic-sink', net.get('h_bg_server'))
+        sink = launch(['iperf', '-s', '-u', '-p', '5001'], 'traffic-sink', net.get('h_sink'))
         time.sleep(1)
         if server.poll() is not None or sink.poll() is not None:
             raise RuntimeError('Server startup failed; see server and traffic-sink logs.')
@@ -127,7 +129,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             if phase == 1:
                 traffic = launch(['iperf', '-c', '10.0.0.2', '-u', '-p', '5001', '-b', '12M',
                         '-t', str(math.ceil(duration_sec * 2 / 3))],
-                       'traffic-source', net.get('h_bg_client'))
+                       'traffic-source', net.get('h_load'))
             elif phase == 2:
                 inject_link_impairment(net, delay_ms=50, jitter_ms=15)
             # Save flow counters near the end of each phase, after controller polls.
@@ -149,6 +151,8 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             if not any(row['client_id'] == f'h_client{client_id}' and row['status'] == 'SUCCESS' for row in records):
                 raise RuntimeError(f'Client {client_id} has no successful sync samples; see client logs.')
         return records
+    except Exception as error:
+        raise RuntimeError(f'Mininet experiment failed: {error}. Logs: {output_dir}') from error
     finally:
         for proc in reversed(processes):
             stop_process(proc)

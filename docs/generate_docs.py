@@ -5,11 +5,11 @@ Course: UE25CS243A: Computer Networks — Team 11 (Project #23)
 Member 3 Deliverable: docs/generate_docs.py
 
 Generates docs/architecture_diagram.png visualizing:
-  - Time clients (h_client1..3) & background load generator (h_bg_client)
+  - Time clients (h_client1..3) & background load generator (h_load)
   - Edge switch s1 with HTB queues
   - Dual-path diamond core: Path A (s2, congested) vs. Path B (s3, clean bypass)
   - Egress switch s4
-  - Reference server (h_server) & traffic sink (h_bg_server)
+  - Reference server (h_server) & traffic sink (h_sink)
   - Ryu OpenFlow 1.3 Controller (c0) with real-time port monitoring & dynamic rerouting
 """
 
@@ -58,7 +58,7 @@ def create_architecture_diagram(out_path: str = OUT_PATH):
         ("h_client1\n(10.0.0.10)\nDrift: +20ms/s", 1.8, 6.4, "#d4efdf", "#27ae60"),
         ("h_client2\n(10.0.0.11)\nDrift: -15ms/s", 1.8, 4.8, "#d4efdf", "#27ae60"),
         ("h_client3\n(10.0.0.12)\nDrift: +30ms/s", 1.8, 3.2, "#d4efdf", "#27ae60"),
-        ("h_bg_client\n(10.0.0.20)\n12M iperf / UDP", 1.8, 1.6, "#fadbd8", "#c0392b"),
+        ("h_load\n(10.0.0.20)\n12M iperf / UDP", 1.8, 1.6, "#fadbd8", "#c0392b"),
     ]
 
     for label, x, y, bg_color, border_color in clients:
@@ -115,7 +115,7 @@ def create_architecture_diagram(out_path: str = OUT_PATH):
     # Servers (Right)
     servers = [
         ("h_server (10.0.0.1)\nUDP Time Server\nPort: 12300", 13.8, 5.2, "#d4efdf", "#27ae60"),
-        ("h_bg_server (10.0.0.2)\nTraffic Sink\nPort: 5001", 13.8, 3.2, "#fadbd8", "#c0392b"),
+        ("h_sink (10.0.0.2)\nTraffic Sink\nPort: 5001", 13.8, 3.2, "#fadbd8", "#c0392b"),
     ]
 
     for label, x, y, bg_color, border_color in servers:

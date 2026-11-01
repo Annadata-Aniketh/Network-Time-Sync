@@ -24,6 +24,12 @@ class TestTimeSyncTopology(unittest.TestCase):
     def setUp(self):
         self.topo = TimeSyncTopo()
 
+    def test_host_interfaces_fit_linux_name_limit(self):
+        # Mininet appends "-eth0" to each host name. Linux allows 15 bytes.
+        for host in self.topo.hosts():
+            with self.subTest(host=host):
+                self.assertLessEqual(len(f'{host}-eth0'.encode()), 15)
+
     def test_switches(self):
         """Verify the 4 switches in the diamond topology."""
         switches = set(self.topo.switches())
@@ -32,7 +38,7 @@ class TestTimeSyncTopology(unittest.TestCase):
     def test_hosts(self):
         """Verify the 6 hosts (3 clients, 1 server, 2 background)."""
         hosts = set(self.topo.hosts())
-        expected = {'h_server', 'h_bg_server', 'h_client1', 'h_client2', 'h_client3', 'h_bg_client'}
+        expected = {'h_server', 'h_sink', 'h_client1', 'h_client2', 'h_client3', 'h_load'}
         self.assertEqual(hosts, expected)
 
     def test_switch_dpids(self):
@@ -48,16 +54,16 @@ class TestTimeSyncTopology(unittest.TestCase):
         if hasattr(self.topo, 'hosts_dict'):
             self.assertEqual(self.topo.hosts_dict['h_server']['ip'], '10.0.0.1/24')
             self.assertEqual(self.topo.hosts_dict['h_server']['mac'], '00:00:00:00:00:01')
-            self.assertEqual(self.topo.hosts_dict['h_bg_server']['ip'], '10.0.0.2/24')
-            self.assertEqual(self.topo.hosts_dict['h_bg_server']['mac'], '00:00:00:00:00:02')
+            self.assertEqual(self.topo.hosts_dict['h_sink']['ip'], '10.0.0.2/24')
+            self.assertEqual(self.topo.hosts_dict['h_sink']['mac'], '00:00:00:00:00:02')
             self.assertEqual(self.topo.hosts_dict['h_client1']['ip'], '10.0.0.11/24')
             self.assertEqual(self.topo.hosts_dict['h_client1']['mac'], '00:00:00:00:00:11')
             self.assertEqual(self.topo.hosts_dict['h_client2']['ip'], '10.0.0.12/24')
             self.assertEqual(self.topo.hosts_dict['h_client2']['mac'], '00:00:00:00:00:12')
             self.assertEqual(self.topo.hosts_dict['h_client3']['ip'], '10.0.0.13/24')
             self.assertEqual(self.topo.hosts_dict['h_client3']['mac'], '00:00:00:00:00:13')
-            self.assertEqual(self.topo.hosts_dict['h_bg_client']['ip'], '10.0.0.20/24')
-            self.assertEqual(self.topo.hosts_dict['h_bg_client']['mac'], '00:00:00:00:00:20')
+            self.assertEqual(self.topo.hosts_dict['h_load']['ip'], '10.0.0.20/24')
+            self.assertEqual(self.topo.hosts_dict['h_load']['mac'], '00:00:00:00:00:20')
 
     def test_deterministic_ports_s1(self):
         """Verify deterministic switch port mapping on switch s1."""
@@ -72,7 +78,7 @@ class TestTimeSyncTopology(unittest.TestCase):
             self.assertEqual(s1_ports.get('h_client1'), 1)
             self.assertEqual(s1_ports.get('h_client2'), 2)
             self.assertEqual(s1_ports.get('h_client3'), 3)
-            self.assertEqual(s1_ports.get('h_bg_client'), 4)
+            self.assertEqual(s1_ports.get('h_load'), 4)
             self.assertEqual(s1_ports.get('s2'), 5)  # Path A uplink
             self.assertEqual(s1_ports.get('s3'), 6)  # Path B uplink
 
@@ -87,7 +93,7 @@ class TestTimeSyncTopology(unittest.TestCase):
                     s4_ports[l['node1']] = l['port2']
 
             self.assertEqual(s4_ports.get('h_server'), 1)
-            self.assertEqual(s4_ports.get('h_bg_server'), 2)
+            self.assertEqual(s4_ports.get('h_sink'), 2)
             self.assertEqual(s4_ports.get('s2'), 5)  # Path A downlink
             self.assertEqual(s4_ports.get('s3'), 6)  # Path B downlink
 

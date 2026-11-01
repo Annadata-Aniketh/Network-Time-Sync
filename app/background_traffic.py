@@ -4,8 +4,8 @@ Background Traffic Generator (iperf Wrapper & Pure-Python UDP Blaster)
 Course: UE25CS243A: Computer Networks — Team 11 (Project #23)
 Member 3 Deliverable: app/background_traffic.py
 
-Generates controllable background saturation load between h_bg_client (10.0.0.20)
-and h_bg_server (10.0.0.2) on UDP port 5001 to saturate the 10 Mbps bottleneck link.
+Generates controllable background saturation load between h_load (10.0.0.20)
+and h_sink (10.0.0.2) on UDP port 5001 to saturate the 10 Mbps bottleneck link.
 Supports iperf/iperf3 execution inside Mininet hosts with an automatic pure-Python
 UDP packet blaster fallback when iperf is unavailable.
 """
