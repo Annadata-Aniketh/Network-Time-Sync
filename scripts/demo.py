@@ -7,43 +7,35 @@ import subprocess
 import sys
 
 from evaluation.benchmark import check_environment, run_benchmark
+from scripts.terminal import Terminal
 
 
-def show_summary(directory):
+def show_summary(directory, terminal=None):
     path = directory / 'summary_metrics.md'
     if path.exists():
-        print(path.read_text())
+        (terminal or Terminal()).summary(path.read_text())
     else:
         print('No summary yet. Generate plots for a completed comparison first.')
 
 
-def make_plots(directory):
-    subprocess.run([sys.executable, '-m', 'evaluation.plot_results',
-                    '--data-dir', str(directory), '--out-dir', str(directory / 'plots')], check=True)
+def make_plots(directory, terminal=None):
+    result = subprocess.run([sys.executable, '-m', 'evaluation.plot_results',
+                             '--data-dir', str(directory), '--out-dir', str(directory / 'plots')],
+                            capture_output=True, text=True)
+    (directory / 'plotting.log').write_text(result.stdout + result.stderr)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or 'Plotting failed; see plotting.log.')
+    show_summary(directory, terminal)
+    (terminal or Terminal()).notice(f'Plots saved: {directory / "plots"}', 'green')
 
 
-def menu():
-    duration = 60.0
+def menu(duration=60.0, color=True):
     latest = None
+    terminal = Terminal(color=color)
     while True:
-        print(f'''
-Network Time Synchronization | Team 11
-Linux VM / Mininet / OS-Ken
-
-  1  Check environment
-  2  Run baseline (Path A, best effort)
-  3  Run optimized (QoS and automatic rerouting)
-  4  Run comparison (baseline, then optimized)
-  5  Generate plots for a comparison
-  6  Show summary
-  7  Set duration (currently {duration:g}s per scenario)
-  8  Run tests
-  9  Test automatic recovery (stop load and return to Path A)
-  0  Exit
-
-Results: {latest or 'no run selected'}''')
+        terminal.menu(duration, latest)
         try:
-            choice = input('Select: ').strip()
+            choice = input('  › ').strip().lower()
             if choice == '0':
                 return
             if choice == '1':
@@ -51,7 +43,14 @@ Results: {latest or 'no run selected'}''')
                 print('Environment checks passed.')
             elif choice in ['2', '3', '4', '9']:
                 scenario = {'2': 'baseline', '3': 'optimized', '4': 'both', '9': 'recovery'}[choice]
-                latest = run_benchmark(duration=duration, scenario=scenario)
+                if terminal.interactive:
+                    with terminal.logs():
+                        latest = run_benchmark(duration=duration, scenario=scenario, observer=terminal.on_event)
+                    terminal.notice(f'Saved results: {latest}', 'green')
+                    if scenario == 'recovery':
+                        show_summary(latest, terminal)
+                else:
+                    latest = run_benchmark(duration=duration, scenario=scenario)
             elif choice in ['5', '6']:
                 entered = input(f'Results directory [{latest or "required"}]: ').strip()
                 directory = Path(entered).expanduser() if entered else latest
@@ -60,9 +59,9 @@ Results: {latest or 'no run selected'}''')
                     continue
                 latest = directory
                 if choice == '5':
-                    make_plots(directory)
+                    make_plots(directory, terminal)
                 else:
-                    show_summary(directory)
+                    show_summary(directory, terminal)
             elif choice == '7':
                 value = float(input('Seconds per scenario (9–3600; 60 recommended): '))
                 if not 9 <= value <= 3600:
@@ -70,16 +69,26 @@ Results: {latest or 'no run selected'}''')
                 duration = value
             elif choice == '8':
                 subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests'], check=True)
+            elif choice == 'i':
+                terminal.explain()
+            elif choice == 'h':
+                terminal.guide()
+            elif choice == 'w':
+                terminal.notice('Open web/index.html, or run in another terminal:')
+                terminal.line('  python3 -m http.server 8080 --bind 127.0.0.1 --directory web')
+                terminal.line('  Browser: http://localhost:8080')
             else:
-                print('Choose one of the listed options.')
+                terminal.notice('Choose one of the listed options.', 'amber')
         except (ValueError, RuntimeError, OSError, subprocess.CalledProcessError) as error:
-            print(f'Could not complete action: {error}')
+            terminal.notice(f'Could not complete action: {error}', 'red')
         except EOFError:
             return
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--explain', action='store_true', help='Explain the protocol with a terminal animation')
+    parser.add_argument('--no-color', action='store_true', help='Disable terminal colors')
     parser.add_argument('--batch', action='store_true', help='Run without the menu')
     parser.add_argument('--scenario', choices=['baseline', 'optimized', 'both', 'recovery'], default='both')
     parser.add_argument('--duration', type=float, default=60)
@@ -88,13 +97,15 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     try:
-        if args.batch:
+        if args.explain:
+            Terminal(color=not args.no_color).explain()
+        elif args.batch:
             run_benchmark(output_dir=args.output_dir, duration=args.duration,
                           interval=args.interval, scenario=args.scenario)
         elif not sys.stdin.isatty():
             parser.error('Interactive menu needs a terminal; use --batch for automation.')
         else:
-            menu()
+            menu(duration=args.duration, color=not args.no_color)
     except KeyboardInterrupt:
         print('\nStopped.')
         return 130

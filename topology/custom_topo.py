@@ -41,6 +41,7 @@ Port & Addressing Plan:
 import sys
 import subprocess
 import argparse
+import logging
 
 try:
     from mininet.topo import Topo
@@ -171,7 +172,7 @@ def setup_qos_queues(net=None):
         )
         code, out, err = _run_cmd(cmd)
         if code == 0:
-            print(f"[QoS] Configured HTB queues (0:Default, 1:TimeSync, 2:RateLimited) on {port}")
+            logging.info("QoS ready on %s: default / sync / background queues", port)
         else:
             print(f"[QoS Warning] Failed to configure QoS on {port}: {err.strip()}", file=sys.stderr)
             success = False

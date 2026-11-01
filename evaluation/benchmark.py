@@ -74,6 +74,19 @@ def wait_for_controller(process, timeout=15):
     raise RuntimeError(f'Controller did not listen on port 6653 within {timeout:g} seconds; see controller.log.')
 
 
+def wait_until(deadline, on_tick=None):
+    """Keep the experiment schedule while optionally refreshing the terminal."""
+    if on_tick is None:
+        time.sleep(max(0, deadline - time.monotonic()))
+        return
+    while True:
+        remaining = deadline - time.monotonic()
+        on_tick()
+        if remaining <= 0:
+            return
+        time.sleep(min(.25, remaining))
+
+
 def check_connectivity(net, log):
     """Check every directed host pair and save ping output for failed paths."""
     failed = 0
@@ -94,7 +107,7 @@ def check_connectivity(net, log):
     return loss
 
 
-def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_sec=0.5, recovery=False):
+def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_sec=0.5, recovery=False, observer=None):
     from mininet.net import Mininet
     from mininet.node import RemoteController, OVSSwitch
     from mininet.link import TCLink
@@ -126,6 +139,8 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             subprocess.run(['ovs-vsctl', 'list', 'Queue'], stdout=stream, check=True)
 
     try:
+        if observer:
+            observer(dict(kind='scenario_start', mode=mode, duration=duration_sec, directory=str(output_dir)))
         controller = launch([sys.executable, '-m', 'sdn.run_controller',
                              '--ofp-tcp-listen-port', '6653', 'sdn/controller.py'], 'controller')
         wait_for_controller(controller)
@@ -165,10 +180,16 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
                 *(['--recovery'] if recovery else []),
             ], f'client{client_id}', net.get(f'h_client{client_id}')))
 
+        def tick():
+            observer(dict(kind='tick', elapsed=max(0, time.monotonic() - start)))
+
+        refresh = tick if observer else None
         for phase in range(3):
-            time.sleep(max(0, start + phase * duration_sec / 3 - time.monotonic()))
+            wait_until(start + phase * duration_sec / 3, refresh)
             label = RECOVERY_PHASE if recovery and phase == 2 else PHASES[phase]
             logging.info('%s: %s', mode, label)
+            if observer:
+                observer(dict(kind='phase', phase=label, elapsed=max(0, time.monotonic() - start)))
             if phase == 1:
                 traffic = launch(['iperf', '-c', '10.0.0.2', '-u', '-p', '5001', '-b', '12M',
                         '-t', str(math.ceil(duration_sec * 2 / 3))],
@@ -182,7 +203,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
                 else:
                     inject_link_impairment(net, delay_ms=50, jitter_ms=15)
             # Save flow counters near the end of each phase, after controller polls.
-            time.sleep(max(0, start + (phase + 1) * duration_sec / 3 - 0.2 - time.monotonic()))
+            wait_until(start + (phase + 1) * duration_sec / 3 - .2, refresh)
             if controller.poll() is not None:
                 raise RuntimeError('Controller exited during experiment; see controller.log.')
             capture_state(f'phase{phase + 1}')
@@ -199,6 +220,8 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
         for client_id in range(1, 4):
             if not any(row['client_id'] == f'h_client{client_id}' and row['status'] == 'SUCCESS' for row in records):
                 raise RuntimeError(f'Client {client_id} has no successful sync samples; see client logs.')
+        if observer:
+            observer(dict(kind='scenario_complete'))
         return records
     except Exception as error:
         raise RuntimeError(f'Mininet experiment failed: {error}. Logs: {output_dir}') from error
@@ -223,7 +246,7 @@ def sync_request_count(path, priority, port):
     return None
 
 
-def verify_recovery(output_dir, records):
+def verify_recovery(output_dir, records, quiet=False):
     """Require packet evidence for both the reroute and the return to Path A."""
     output_dir = Path(output_dir)
     logs = output_dir / 'optimized'
@@ -249,13 +272,14 @@ def verify_recovery(output_dir, records):
     lines += [f'- {"PASS" if ok else "FAIL"}: {label}' for label, ok in checks.items()]
     summary = '\n'.join(lines) + '\n'
     (output_dir / 'summary_metrics.md').write_text(summary)
-    print(summary)
+    if not quiet:
+        print(summary)
     if not passed:
         raise RuntimeError(f'Recovery was not verified; inspect {output_dir / "recovery_check.json"}')
     return result
 
 
-def run_benchmark(output_dir=None, duration=60, interval=0.5, scenario='both'):
+def run_benchmark(output_dir=None, duration=60, interval=0.5, scenario='both', observer=None):
     if not math.isfinite(duration) or duration < 9:
         raise ValueError('Duration must be at least 9 seconds (three controller polling phases).')
     if not math.isfinite(interval) or interval <= 0:
@@ -283,18 +307,19 @@ def run_benchmark(output_dir=None, duration=60, interval=0.5, scenario='both'):
     try:
         for mode in modes:
             records = run_benchmark_scenario_mininet(mode, output_dir / mode, duration, interval,
-                                                     recovery=scenario == 'recovery')
+                                                     recovery=scenario == 'recovery', observer=observer)
             name = 'baseline_metrics.csv' if mode == 'baseline' else 'sdn_optimized_metrics.csv'
             write_csv(output_dir / name, records)
             if scenario == 'recovery':
-                verify_recovery(output_dir, records)
+                verify_recovery(output_dir, records, quiet=observer is not None)
         metadata['status'] = 'complete'
     except BaseException:
         metadata['status'] = 'incomplete'
         raise
     finally:
         metadata_path.write_text(json.dumps(metadata, indent=2) + '\n')
-    print(f'Results: {output_dir}')
+    if observer is None:
+        print(f'Results: {output_dir}')
     return output_dir
 
 

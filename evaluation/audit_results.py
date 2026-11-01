@@ -1,4 +1,4 @@
-"""Recompute the report's evidence tables from the preserved VM archive."""
+"""Recompute recorded metrics and recovery checks from the preserved VM archive."""
 
 import csv
 import hashlib
@@ -15,9 +15,9 @@ from evaluation.plot_results import load_datasets, compute_summary_table
 from evaluation.benchmark import sync_request_count, verify_recovery
 from evaluation.summarize_runs import summarize_runs
 
-ARCHIVE = ROOT / 'docs/evidence/vm-results-20261101-195256.tar.gz'
-OUTPUT = ROOT / 'docs/results'
-OUTPUT.mkdir(exist_ok=True)
+ARCHIVE = ROOT / 'evaluation/reference/vm-results.tar.gz'
+OUTPUT = ROOT / 'evaluation/runs/audit'
+OUTPUT.mkdir(parents=True, exist_ok=True)
 trials, audits, phases, totals = [], [], [], {}
 with tempfile.TemporaryDirectory() as directory:
     with tarfile.open(ARCHIVE) as archive:
