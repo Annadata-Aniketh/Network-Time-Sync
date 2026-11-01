@@ -128,6 +128,9 @@ for a custom results directory. The default duration is 60 seconds per mode.
 - **Network state left after a crash:** run `sudo mn -c`, then restart the demo.
 - **Missing tools or import errors:** check the setup output and select the
   environment check before retrying.
+- **Package download timed out:** setup allows 120 seconds per socket operation
+  and retries the dependency install up to three times. Check the VM's internet
+  connection if all attempts fail, then rerun setup; cached downloads are reused.
 - **Run fails:** inspect `controller.log` and the client or traffic logs in that
   run's directory.
 

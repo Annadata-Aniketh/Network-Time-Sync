@@ -16,7 +16,20 @@ service openvswitch-switch start
 if [[ ! -x .venv/bin/python ]]; then
     python3 -m venv --system-site-packages .venv
 fi
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -r requirements.txt
+# Avoid downloading pip itself; the venv's bundled pip can install these packages.
+# Older pip versions do not retry every interrupted download, so retry the install
+# as well as individual connections. Completed downloads remain in pip's cache.
+for attempt in 1 2 3; do
+    echo "Installing Python dependencies (attempt $attempt/3)..."
+    if .venv/bin/python -m pip --disable-pip-version-check install \
+        --timeout 120 --retries 5 -r requirements.txt; then
+        break
+    fi
+    if [[ "$attempt" -eq 3 ]]; then
+        echo 'Dependency installation failed. Check the error above and your VM internet connection, then rerun setup.' >&2
+        exit 1
+    fi
+    echo 'Installation did not finish; retrying with cached downloads...'
+done
 .venv/bin/python -c 'import mininet.net; import os_ken.cmd.manager; import pandas; import matplotlib'
 echo 'Dependencies imported successfully. Start the menu: sudo bash scripts/run_demo.sh'
