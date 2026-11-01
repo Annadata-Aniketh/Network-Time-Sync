@@ -7,6 +7,8 @@ Unit tests for Member 2 deliverables:
 import os
 import json
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 from topology import (
     TimeSyncTopo,
     create_network,
@@ -156,6 +158,49 @@ class TestSDNController(unittest.TestCase):
         controller = TimeSyncSDNController()
         controller._reroute_to_path_b()
         controller._restore_to_path_a()
+
+
+class TestControllerRecovery(unittest.TestCase):
+    def test_delete_is_restricted_to_reroute_cookie(self):
+        controller = TimeSyncSDNController()
+        dp = Mock()
+        controller.del_flow(dp, 200, 'sync-match')
+        kwargs = dp.ofproto_parser.OFPFlowMod.call_args.kwargs
+        self.assertEqual(kwargs['cookie'], 200)
+        self.assertEqual(kwargs['cookie_mask'], 0xffffffffffffffff)
+        self.assertEqual(kwargs['match'], 'sync-match')
+
+    def test_recovery_requires_consecutive_low_load_polls(self):
+        controller = TimeSyncSDNController()
+        controller.is_rerouted = True
+        controller._restore_to_path_a = Mock()
+        controller._reroute_to_path_b = Mock()
+        total_bytes = 0
+        # Initial counter, two quiet polls, high load, then three quiet polls.
+        loads = [0, 0, 0, 2000000, 0, 0, 0]
+        for tick, extra in enumerate(loads):
+            total_bytes += extra
+            event = SimpleNamespace(msg=SimpleNamespace(
+                datapath=SimpleNamespace(id=1),
+                body=[SimpleNamespace(port_no=5, tx_bytes=total_bytes, tx_dropped=0)]))
+            with patch('sdn.controller.time.time', return_value=100 + tick * 2):
+                controller.port_stats_reply_handler(event)
+            if tick < 6:
+                controller._restore_to_path_a.assert_not_called()
+        controller._restore_to_path_a.assert_called_once()
+        self.assertFalse(controller.is_rerouted)
+
+    def test_congestion_installs_path_b_rules(self):
+        controller = TimeSyncSDNController()
+        controller._reroute_to_path_b = Mock()
+        for tick, count in enumerate([0, 2000000]):
+            event = SimpleNamespace(msg=SimpleNamespace(
+                datapath=SimpleNamespace(id=1),
+                body=[SimpleNamespace(port_no=5, tx_bytes=count, tx_dropped=0)]))
+            with patch('sdn.controller.time.time', return_value=100 + tick * 2):
+                controller.port_stats_reply_handler(event)
+        controller._reroute_to_path_b.assert_called_once()
+        self.assertTrue(controller.is_rerouted)
 
 
 if __name__ == '__main__':

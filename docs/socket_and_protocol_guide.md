@@ -59,9 +59,10 @@ python3 -m unittest discover -s tests -v
 
 ## 3. CSV Schema for Member 3 (`data/client_{id}_sync.csv`)
 
-Member 3's `evaluation/plot_results.py` can read these columns:
-`timestamp, client_id, seq_num, t0, t1, t2, t3, rtt, offset, status`
+The standalone client writes:
+`timestamp, client_id, seq_num, t0, t1, t2, t3, rtt, offset, status`.
 
-- `rtt`: Delay in milliseconds.
-- `offset`: Clock offset in milliseconds.
-- `status`: `SUCCESS` or `TIMEOUT`.
+`rtt` and `offset` are in milliseconds. Status is `SUCCESS`, `TIMEOUT`, or `INVALID`.
+This is a standalone diagnostic log. Comparison plots use the separate benchmark
+schema in `evaluation/sync_worker.py`, including phase, residual error, and status.
+Use the Linux VM menu in the README for the full SDN demonstration.

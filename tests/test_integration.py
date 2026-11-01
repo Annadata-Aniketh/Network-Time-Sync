@@ -3,6 +3,8 @@ import threading
 import time
 import os
 import shutil
+import socket
+from evaluation.sync_worker import sample
 from app.server import TimeServer
 from app.client import TimeSyncClient, VirtualClock
 
@@ -28,6 +30,16 @@ class TestTimeSyncIntegration(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(self.test_csv_dir):
             shutil.rmtree(self.test_csv_dir, ignore_errors=True)
+
+    def test_benchmark_sample_with_real_server(self):
+        clock = VirtualClock(initial_offset=.1, drift_rate=0)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(1)
+            sock.connect(('127.0.0.1', self.test_port))
+            row = sample(sock, clock, client_id=1, seq=1)
+        self.assertEqual(row['status'], 'SUCCESS')
+        self.assertGreaterEqual(row['rtt_ms'], 0)
+        self.assertLess(row['true_residual_error_ms'], 30)
 
     def test_client_server_step_sync(self):
         """Verify client connects to server and converges using step adjustment."""

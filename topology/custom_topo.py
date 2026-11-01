@@ -151,13 +151,9 @@ def _run_cmd(cmd: str):
 
 
 def setup_qos_queues(net=None):
-    """
-    Configures Open vSwitch HTB QoS queues on Path A egress ports (s1-eth5, s4-eth5):
-      - Queue 0: Default fallback best-effort queue (min-rate=1Mbps, max-rate=10Mbps)
-      - Queue 1: High-Priority Time-Sync UDP 12300 (min-rate=2Mbps, max-rate=10Mbps, priority=1)
-      - Queue 2: Low-Priority Rate-Limited BG Traffic (min-rate=1Mbps, max-rate=6Mbps, priority=10)
-    """
+    """Configure HTB queues on the two Path A edge egress ports."""
     ports = ['s1-eth5', 's4-eth5']
+
     success = True
 
     for port in ports:
@@ -183,26 +179,15 @@ def setup_qos_queues(net=None):
 
 
 def inject_link_impairment(net=None, delay_ms: int = 50, jitter_ms: int = 15, loss_pct: float = 0.0):
-    """
-    Injects artificial network degradation on Primary Path A using Linux tc netem.
-    Applies asymmetric delay and jitter to s2-eth2 and s2-eth1 interfaces.
-    """
-    interfaces = ['s2-eth2', 's2-eth1']
-    loss_arg = f" loss {loss_pct}%" if loss_pct > 0 else ""
-
-    for dev in interfaces:
-        # Try replace first; fallback to add if no root qdisc exists
-        cmd_replace = f"tc qdisc replace dev {dev} root netem delay {delay_ms}ms {jitter_ms}ms distribution normal{loss_arg}"
-        code, out, err = _run_cmd(cmd_replace)
-        if code == 0:
-            print(f"[tc-netem] Injected impairment on {dev}: delay={delay_ms}ms +/- {jitter_ms}ms{loss_arg}")
-        else:
-            cmd_add = f"tc qdisc add dev {dev} root netem delay {delay_ms}ms {jitter_ms}ms distribution normal{loss_arg}"
-            code2, _, err2 = _run_cmd(cmd_add)
-            if code2 == 0:
-                print(f"[tc-netem] Added netem qdisc on {dev}: delay={delay_ms}ms +/- {jitter_ms}ms{loss_arg}")
-            else:
-                print(f"[tc-netem Warning] Failed to apply netem on {dev}: {err.strip()}", file=sys.stderr)
+    """Delay the forward Path A egress while retaining its 10 Mbps limit."""
+    if net is None:
+        raise ValueError('A running Mininet network is required')
+    result = net.get('s2').intf('s2-eth2').config(
+        bw=10, delay=f'{delay_ms}ms', jitter=f'{jitter_ms}ms',
+        loss=loss_pct, max_queue_size=100,
+    )
+    if result.get('tcoutputs') and any(result['tcoutputs']):
+        raise RuntimeError(f'Could not apply link impairment: {result["tcoutputs"]}')
 
 
 def clear_link_impairment(net=None):

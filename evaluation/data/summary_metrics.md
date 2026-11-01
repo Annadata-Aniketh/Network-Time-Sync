@@ -10,4 +10,4 @@
 | Max Clock Error (ms) | 52.139 | 12.291 | **+76.43%** |
 | Convergence Time (s) | 1.00 | 1.01 | -1.00% |
 
-> **Key Takeaway:** SDN-driven OpenFlow classification and dynamic Path B failover reduce tail RTT bufferbloat and maintain sub-millisecond clock synchronization even under severe 12 Mbps link congestion and link jitter.
+> Legacy output: the runtime and run parameters for these measurements were not recorded. Do not treat this table as verified Mininet results. Generate a new comparison with the Linux VM runner.
