@@ -59,6 +59,20 @@ def stop_process(process):
             process.wait()
 
 
+def wait_for_controller(process, timeout=15):
+    """Wait for OS-Ken's listening socket before Mininet checks the controller."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError('Controller exited during startup; see controller.log.')
+        try:
+            with socket.create_connection(('127.0.0.1', 6653), timeout=0.5):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise RuntimeError(f'Controller did not listen on port 6653 within {timeout:g} seconds; see controller.log.')
+
+
 def check_connectivity(net, log):
     """Check every directed host pair and save ping output for failed paths."""
     failed = 0
@@ -113,6 +127,7 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
     try:
         controller = launch([sys.executable, '-m', 'sdn.run_controller',
                              '--ofp-tcp-listen-port', '6653', 'sdn/controller.py'], 'controller')
+        wait_for_controller(controller)
         # Assign the network before building so a partial build can be stopped.
         net = Mininet(topo=TimeSyncTopo(), controller=None, switch=OVSSwitch, link=TCLink, build=False)
         net.addController('c0', controller=RemoteController, ip='127.0.0.1', port=6653)
