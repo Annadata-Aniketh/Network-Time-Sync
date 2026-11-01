@@ -59,6 +59,26 @@ def stop_process(process):
             process.wait()
 
 
+def check_connectivity(net, log):
+    """Check every directed host pair and save ping output for failed paths."""
+    failed = 0
+    total = 0
+    for source in net.hosts:
+        for destination in net.hosts:
+            if source == destination:
+                continue
+            total += 1
+            # Two probes allow ARP resolution and expose repeatable forwarding errors.
+            output = source.cmd('ping', '-n', '-c', '2', '-i', '0.2', '-W', '1', destination.IP())
+            sent, received = net._parsePing(output)
+            ok = sent > 0 and received > 0
+            failed += not ok
+            log.write(f'{source.name} -> {destination.name}: {"OK" if ok else "FAILED"}\n{output}\n')
+    loss = 100 * failed / total if total else 100
+    logging.info('Connectivity: %s/%s host pairs reachable', total - failed, total)
+    return loss
+
+
 def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_sec=0.5):
     from mininet.net import Mininet
     from mininet.node import RemoteController, OVSSwitch
@@ -102,8 +122,13 @@ def run_benchmark_scenario_mininet(mode, output_dir, duration_sec=60, interval_s
             raise RuntimeError('Controller connection failed; see controller.log.')
         if mode == 'optimized' and not setup_qos_queues(net):
             raise RuntimeError('OVS queue setup failed.')
-        if net.pingAll(timeout='2') > 0:
-            raise RuntimeError('Host connectivity check failed.')
+        # OVS connection readiness precedes flow installation and queue updates.
+        time.sleep(1)
+        with (output_dir / 'connectivity.txt').open('w') as connectivity_log:
+            loss = check_connectivity(net, connectivity_log)
+        capture_state('startup')
+        if loss > 0:
+            raise RuntimeError('Host connectivity check failed; see connectivity.txt and startup flow dumps.')
 
         server = launch([sys.executable, '-m', 'app.server'], 'server', net.get('h_server'))
         sink = launch(['iperf', '-s', '-u', '-p', '5001'], 'traffic-sink', net.get('h_sink'))

@@ -117,28 +117,29 @@ class TimeSyncTopo(Topo):
         h_client3 = self.addHost('h_client3', ip='10.0.0.13/24', mac='00:00:00:00:00:13')
         h_load = self.addHost('h_load', ip='10.0.0.20/24', mac='00:00:00:00:00:20')
 
+        # HFSC shapes link rates; OVS separately manages the application HTB queues.
         # 3. Host-to-switch access links (100 Mbps, 1ms delay, max_queue_size 1000)
         # On s1: Port 1->h_client1, Port 2->h_client2, Port 3->h_client3, Port 4->h_load
-        self.addLink(s1, h_client1, port1=1, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_client2, port1=2, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_client3, port1=3, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_load, port1=4, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_client1, port1=1, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_client2, port1=2, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_client3, port1=3, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_load, port1=4, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
 
         # On s4: Port 1->h_server, Port 2->h_sink
-        self.addLink(s4, h_server, port1=1, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s4, h_sink, port1=2, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s4, h_server, port1=1, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s4, h_sink, port1=2, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
 
         # 4. Core Path A links (Primary Path, intentionally bottlenecked at 10 Mbps, queue=100)
         # s1 Port 5 <-> s2 Port 1
-        self.addLink(s1, s2, port1=5, port2=1, cls=TCLink, bw=10, delay='2ms', max_queue_size=100)
+        self.addLink(s1, s2, port1=5, port2=1, cls=TCLink, use_hfsc=True, bw=10, delay='2ms', max_queue_size=100)
         # s2 Port 2 <-> s4 Port 5
-        self.addLink(s2, s4, port1=2, port2=5, cls=TCLink, bw=10, delay='2ms', max_queue_size=100)
+        self.addLink(s2, s4, port1=2, port2=5, cls=TCLink, use_hfsc=True, bw=10, delay='2ms', max_queue_size=100)
 
         # 5. Core Path B links (Alternate Low-Latency Path, clean bypass: 50 Mbps, queue=1000)
         # s1 Port 6 <-> s3 Port 1
-        self.addLink(s1, s3, port1=6, port2=1, cls=TCLink, bw=50, delay='2ms', max_queue_size=1000)
+        self.addLink(s1, s3, port1=6, port2=1, cls=TCLink, use_hfsc=True, bw=50, delay='2ms', max_queue_size=1000)
         # s3 Port 2 <-> s4 Port 6
-        self.addLink(s3, s4, port1=2, port2=6, cls=TCLink, bw=50, delay='2ms', max_queue_size=1000)
+        self.addLink(s3, s4, port1=2, port2=6, cls=TCLink, use_hfsc=True, bw=50, delay='2ms', max_queue_size=1000)
 
 
 def _run_cmd(cmd: str):
@@ -183,7 +184,7 @@ def inject_link_impairment(net=None, delay_ms: int = 50, jitter_ms: int = 15, lo
     if net is None:
         raise ValueError('A running Mininet network is required')
     result = net.get('s2').intf('s2-eth2').config(
-        bw=10, delay=f'{delay_ms}ms', jitter=f'{jitter_ms}ms',
+        bw=10, use_hfsc=True, delay=f'{delay_ms}ms', jitter=f'{jitter_ms}ms',
         loss=loss_pct, max_queue_size=100,
     )
     if result.get('tcoutputs') and any(result['tcoutputs']):

@@ -69,7 +69,7 @@ the exact directory.
 | `run.json` | Run settings and completion status |
 | `baseline_metrics.csv` | Baseline client measurements |
 | `sdn_optimized_metrics.csv` | Optimized client measurements |
-| `baseline/`, `optimized/` | Client, controller, and traffic logs; network snapshots |
+| `baseline/`, `optimized/` | Client, controller, traffic and connectivity logs; network snapshots |
 | `summary_metrics.md` | Comparison table, created when you generate plots |
 | `plots/` | Clock error, round-trip delay distribution, and jitter charts |
 
@@ -135,7 +135,8 @@ for a custom results directory. The default duration is 60 seconds per mode.
   and retries the dependency install up to three times. Check the VM's internet
   connection if all attempts fail, then rerun setup; cached downloads are reused.
 - **Run fails:** inspect `controller.log` and the client or traffic logs in that
-  run's directory.
+  run's directory. For connectivity failures, `connectivity.txt` lists each
+  host pair and its ping output; `startup-*-flows.txt` contains the forwarding rules.
 
 Press Ctrl+C to stop an experiment. The runner cleans up the processes and
 virtual network it started.

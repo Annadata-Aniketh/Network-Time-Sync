@@ -113,6 +113,11 @@ class TestTimeSyncTopology(unittest.TestCase):
                     self.assertEqual(l['opts'].get('delay'), '2ms')
                     self.assertEqual(l['opts'].get('max_queue_size'), 1000)
 
+    def test_link_shaping_uses_hfsc(self):
+        if hasattr(self.topo, 'links_list'):
+            for link in self.topo.links_list:
+                self.assertTrue(link['opts'].get('use_hfsc'))
+
     def test_helper_functions_callable(self):
         """Verify topology helper functions exist and are callable."""
         for fn in [setup_qos_queues, inject_link_impairment, clear_link_impairment, create_network, start_topology]:
@@ -207,6 +212,48 @@ class TestControllerRecovery(unittest.TestCase):
                 controller.port_stats_reply_handler(event)
         controller._reroute_to_path_b.assert_called_once()
         self.assertTrue(controller.is_rerouted)
+
+
+class TestIPv4Forwarding(unittest.TestCase):
+    def test_all_host_pairs_reachable_in_both_modes(self):
+        # Use the installed controller's real match/action classes without switches.
+        try:
+            from os_ken.ofproto import ofproto_v1_3_parser as parser
+        except ImportError:
+            self.skipTest('Install OS-Ken to validate actual OpenFlow matches')
+        peers = {(1, 5): (2, 1), (2, 1): (1, 5), (2, 2): (4, 5), (4, 5): (2, 2),
+                 (1, 6): (3, 1), (3, 1): (1, 6), (3, 2): (4, 6), (4, 6): (3, 2)}
+        controller = TimeSyncSDNController()
+        hosts = controller.HOST_MAP
+        endpoints = {(h['dpid'], h['port']): ip for ip, h in hosts.items()}
+        for mode in ['baseline', 'optimized']:
+            rules = {}
+            for dpid in range(1, 5):
+                captured = []
+                with patch.object(controller, 'add_flow', side_effect=lambda dp, priority, match, actions:
+                                  captured.append((priority, dict(match.items()), actions))):
+                    installer = controller._install_baseline_flows if mode == 'baseline' else controller._install_optimized_flows
+                    installer(SimpleNamespace(id=dpid, ofproto_parser=parser))
+                rules[dpid] = sorted(captured, key=lambda rule: rule[0], reverse=True)
+            for source, src in hosts.items():
+                for destination in hosts:
+                    if source == destination:
+                        continue
+                    with self.subTest(mode=mode, source=source, destination=destination):
+                        dpid, in_port = src['dpid'], src['port']
+                        reached = None
+                        for _ in range(8):
+                            packet = dict(eth_type=0x0800, ip_proto=1, ipv4_src=source,
+                                          ipv4_dst=destination, in_port=in_port)
+                            matching = [r for r in rules[dpid] if all(packet.get(k) == v for k, v in r[1].items())]
+                            self.assertTrue(matching, 'No matching forwarding rule')
+                            output = next(action.port for action in matching[0][2] if hasattr(action, 'port'))
+                            self.assertNotEqual(output, in_port, 'Packet sent back through ingress port')
+                            if (dpid, output) in endpoints:
+                                reached = endpoints[(dpid, output)]
+                                break
+                            dpid, in_port = peers[(dpid, output)]
+                        self.assertEqual(reached, destination, 'Wrong destination or forwarding loop')
 
 
 if __name__ == '__main__':

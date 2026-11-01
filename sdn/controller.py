@@ -262,9 +262,6 @@ class TimeSyncSDNController(app_manager.OSKenApp):
             m_tcp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_dst=self.bg_port)
             self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
 
-            m_host_bg = parser.OFPMatch(eth_type=0x0800, ipv4_src='10.0.0.20')
-            self.add_flow(datapath, 40, m_host_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
-
         elif dpid == 2:
             m_udp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.bg_port)
             self.add_flow(datapath, 50, m_udp_bg, [parser.OFPActionOutput(2)])

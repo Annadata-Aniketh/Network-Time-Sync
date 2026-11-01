@@ -125,5 +125,21 @@ class TestMininetStartupCleanup(unittest.TestCase):
         network.start.assert_not_called()
 
 
+class TestConnectivityDiagnostics(unittest.TestCase):
+    def test_failed_pair_is_logged_and_reported(self):
+        import io
+        from evaluation.benchmark import check_connectivity
+        first, second = Mock(), Mock()
+        first.name, second.name = 'h_load', 'h_client1'
+        first.cmd.return_value = '2 packets transmitted, 0 received'
+        second.cmd.return_value = '2 packets transmitted, 2 received'
+        net = Mock(hosts=[first, second])
+        net._parsePing.side_effect = [(2, 0), (2, 2)]
+        log = io.StringIO()
+        self.assertEqual(check_connectivity(net, log), 50)
+        self.assertIn('h_load -> h_client1: FAILED', log.getvalue())
+        self.assertIn('h_client1 -> h_load: OK', log.getvalue())
+
+
 if __name__ == '__main__':
     unittest.main()
