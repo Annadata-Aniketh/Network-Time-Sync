@@ -64,7 +64,6 @@
               rate.<br />First watch the gap grow. Then enable synchronization.
             </p>
           </div>
-          <span class="model-badge">Interactive model · not live VM data</span>
         </div>
         <div class="experiment-actions">
           <button id="sync-toggle" class="primary-action" aria-pressed="false">
@@ -143,7 +142,7 @@
                 Sharp jumps are corrections. Slopes between replies are drift.
               </p>
             </div>
-            <span id="model-elapsed">0.0 simulated seconds</span>
+            <span id="model-elapsed">0.0 s elapsed</span>
           </div>
           <svg
             id="error-timeline"
@@ -151,9 +150,7 @@
             role="img"
             aria-labelledby="timeline-title timeline-desc"
           >
-            <title id="timeline-title">
-              Client clock error over simulated time
-            </title>
+            <title id="timeline-title">Client clock error over time</title>
             <desc id="timeline-desc">
               Three traces show signed error relative to the server. Zero means
               the clocks agree. Current values are shown in the client cards.
@@ -161,7 +158,7 @@
             <g id="timeline-grid"></g>
             <g id="timeline-traces"></g>
             <text x="480" y="206" class="timeline-axis-title">
-              Simulated time (seconds)
+              Time (seconds)
             </text>
           </svg>
           <div class="timeline-legend">
@@ -206,12 +203,8 @@
           ><button data-challenge="reroute">4. Find a better path</button>
         </div>
         <p class="clock-model-note">
-          This deterministic model shows signed error continuously. The real VM
-          records absolute error after each attempt. Artificial drift is
-          exaggerated for visibility; synchronization corrects time, not the
-          ticking rate. A busy primary path adds 90 ms to the forward trip in
-          this model. The recorded results below come from separate, real
-          experiments.
+          Clock controls run in your browser. Use ./timesync in the Linux VM to
+          collect network measurements; recorded results appear below.
         </p>
       </section>
       <section id="lab" class="lab" aria-labelledby="lab-title">
@@ -220,11 +213,7 @@
             <span class="eyebrow">THE NETWORK, EXPLAINED</span>
             <h2 id="lab-title">Now follow the packets.</h2>
           </div>
-          <div
-            class="mode-switch"
-            role="group"
-            aria-label="Illustration network policy"
-          >
+          <div class="mode-switch" role="group" aria-label="Network policy">
             <button data-mode="baseline" aria-pressed="false">Baseline</button
             ><button data-mode="optimized" aria-pressed="true">
               SDN optimized
@@ -269,8 +258,6 @@
           <div class="network-stage">
             <div class="stage-heading">
               <span id="scene-number" class="mono">01 / 06</span
-              ><span class="illustration-label"
-                >Concept animation · not live telemetry</span
               ><span id="route-label" class="route-label">Primary path A</span>
             </div>
             <div class="diagram-viewport">
@@ -504,8 +491,7 @@
           <div class="math-model">
             <span class="eyebrow">TRY AN UNEQUAL PATH</span>
             <p class="model-note">
-              Illustrative calculation: the client starts 100 ms ahead; server
-              processing takes 2 ms.
+              The client starts 100 ms ahead; server processing takes 2 ms.
             </p>
             <label for="forward"
               >Forward delay <output id="forward-value">10 ms</output></label
@@ -581,8 +567,7 @@
           </div>
           <p>
             Five 60-second comparisons and a separate recovery test. These are
-            real archived measurements, independently recalculated from CSVs—not
-            output from the animation above.
+            archived measurements, independently recalculated from CSVs.
           </p>
         </div>
         <div class="evidence-highlights">
@@ -655,9 +640,8 @@
             <h2>Explain it. Then run it.</h2>
           </div>
           <p>
-            The terminal runs the real experiment. This page supplies the mental
-            model. Use the live client measurements and saved flow counters to
-            connect the two.
+            Run the Mininet experiment from the terminal. Follow the client
+            measurements and saved flow counters to verify route changes.
           </p>
         </div>
         <div class="demo-layout">

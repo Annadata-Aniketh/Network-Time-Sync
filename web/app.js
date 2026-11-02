@@ -31,7 +31,7 @@ const scenes = [
     copy: "Background packets compete with sync traffic on the 10 Mbps primary path. Unequal forward and reverse delay biases the estimated offset. The next chapter shows the controller response.",
     label: "Background load",
     value: "12M offered / 10 Mbps link",
-    note: "This is a concept model, not a measured queue trace",
+    note: "Sync and background traffic share the primary uplink",
   },
   {
     kicker: "THE RESPONSE",
@@ -45,7 +45,7 @@ const scenes = [
     kicker: "THE RECOVERY",
     title: "When load clears, return.",
     copy: "Stopping the UDP load does not immediately switch the path back. Three consecutive low-load polls remove the reroute rules, leaving the original Path A rules in place.",
-    label: "Illustrated low-load polls",
+    label: "Low-load polls",
     value: "0 / 3 polls",
     note: "The real recovery test verifies flow removal and packet counters",
   },

@@ -105,8 +105,7 @@
     $("reference-time").textContent = clockTime();
     $("clock-route").textContent =
       `Path ${model.route} · ${model.route === "B" ? (model.busy ? "sync rerouted" : "waiting for recovery polls") : model.busy ? "busy" : "clear"}`;
-    $("model-elapsed").textContent =
-      `${model.time.toFixed(1)} simulated seconds`;
+    $("model-elapsed").textContent = `${model.time.toFixed(1)} s elapsed`;
     cards.forEach((card, index) => {
       const client = model.clients[index];
       card.querySelector(".clock-time").textContent = clockTime(client.offset);

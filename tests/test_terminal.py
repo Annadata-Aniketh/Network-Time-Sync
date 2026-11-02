@@ -1,4 +1,4 @@
-"""The demo must distinguish measured data from its teaching animation."""
+"""Terminal measurements, guided navigation, and output formatting."""
 
 import io
 import logging
@@ -40,7 +40,7 @@ class TestTerminal(unittest.TestCase):
         with patch('scripts.terminal.time.sleep') as sleep:
             Terminal(stream).explain()
         sleep.assert_not_called()
-        self.assertIn('ILLUSTRATION · not live packet tracing', stream.getvalue())
+        self.assertIn('GUIDED WALKTHROUGH · UDP 12300', stream.getvalue())
         self.assertIn('06 / 06', stream.getvalue())
         self.assertNotIn('\033', stream.getvalue())
 

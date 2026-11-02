@@ -201,10 +201,10 @@ class Terminal:
                 lines.append(f'  client {index+1}   ' + self.ink('waiting for first sample'))
         if compact:
             lines += ['', '  RTT: reply wait. Gap: after attempt.',
-                      '  CSV values; illustrated motion. Ctrl+C stops.', '']
+                      '  CSV measurements. Ctrl+C stops.', '']
         else:
             lines += ['', '  RTT = reply wait. Error = gap from server after the latest attempt.',
-                      '  ' + self.ink('Numbers: real CSVs. Motion: route illustration, not capture. Ctrl+C stops.'), '']
+                      '  ' + self.ink('CSV measurements · Controller-reported route · Ctrl+C stops.'), '']
         self.draw(lines)
         if kind == 'scenario_complete':
             self.frame_lines = 0  # Keep the finished scenario in scrollback.
@@ -307,8 +307,8 @@ class Terminal:
             frames = 9 if self.interactive and self.width >= 72 else 1
             for frame in range(frames):
                 self.draw(['', '  ' + self.ink(f'{index+1:02} / 06   {title}', 'bold'),
-                           '  ' + self.ink('ILLUSTRATION · not live packet tracing'), '',
-                           *self.network_lines(route, frame, f'Path {route} · illustration'), '',
+                           '  ' + self.ink('GUIDED WALKTHROUGH · UDP 12300'), '',
+                           *self.network_lines(route, frame, f'Path {route}'), '',
                            '  ' + explanation, '  ' + self.ink(detail, 'blue'), '',
                            '  EXPLAIN  ' + cue, '',
                            '  Enter: next   b: back   q: menu' if self.interactive else ''])

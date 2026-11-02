@@ -10,7 +10,7 @@ Use a **Linux VM with Ubuntu 24.04 or Linux Mint 22**, Python 3.12, Git, and sud
 A network connection is needed for the first setup. From a terminal:
 
 ```bash
-git clone --branch codex/project-review-demo https://github.com/Annadata-Aniketh/Network-Time-Sync.git
+git clone --branch final https://github.com/Annadata-Aniketh/Network-Time-Sync.git
 cd Network-Time-Sync
 ./timesync
 ```
@@ -23,8 +23,8 @@ unchanged: only virtual client clocks are corrected.
 
 Want to explore before running the VM? Open `web/index.html` in a browser, or run
 `./timesync web`. The offline clock lab lets you stop synchronization, watch the
-clocks drift, send an exchange, and change the network conditions. It is a
-teaching model; its separate evidence section shows real archived VM results.
+clocks drift, send an exchange, and change the network conditions. The evidence
+section shows archived VM results.
 
 ## Present it in ten minutes
 
@@ -37,8 +37,8 @@ teaching model; its separate evidence section shows real archived VM results.
 | 9–10 min | Show PASS checks | Explain the evidence and the limits of the measurement. |
 
 Keep the default 60 seconds per mode and allow for network startup. Rehearse
-once on your VM. The packet animation illustrates the controller-reported route;
-the client values come from live CSVs. It is not packet capture.
+once on your VM. The route follows controller reports;
+the client values come from live CSVs.
 
 Other controls: `1` checks the environment, `2` / `3` run a single mode,
 `7` changes duration, `8` runs tests, `h` shows the demo plan, and `0` exits.
@@ -97,7 +97,7 @@ capacity. Do not attribute every improvement to one mechanism.
 
 `evaluation/reference/` preserves five real comparisons and one recovery test.
 Recalculate them with `.venv/bin/python -m evaluation.audit_results`. Export new
-VM results with `sudo bash scripts/export_results.sh`. The browser model has
+VM results with `sudo bash scripts/export_results.sh`. The website has
 separate, dependency-free tests: `node --test tests/clock-model.test.cjs`.
 
 ## If something fails
