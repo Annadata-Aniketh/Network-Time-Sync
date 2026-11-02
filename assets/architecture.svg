@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="490" viewBox="0 0 1120 490" role="img" aria-labelledby="title description">
+  <title id="title">TimeSync network architecture</title>
+  <desc id="description">Three UDP clients and a background sender connect to switch s1. Path A uses s2 at 10 Mbps; alternate Path B uses s3 at 50 Mbps. Both reach s4, the reference server and the traffic sink. OS-Ken controls all four switches over OpenFlow 1.3 using TCP 6653. Sync traffic uses UDP 12300 and background traffic uses UDP 5001.</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; fill: #e9f0f2; }
+    .title { font-size: 25px; font-weight: 600; }
+    .sub { font-size: 13px; fill: #91a0ad; }
+    .node { fill: #111c25; stroke: #344652; stroke-width: 1.5; }
+    .name { font-size: 15px; font-weight: 500; text-anchor: middle; }
+    .detail { font-size: 12px; fill: #91a0ad; text-anchor: middle; }
+    .switch { fill: #192b35; stroke: #526875; stroke-width: 1.5; }
+    .access { fill: none; stroke: #5a6d7c; stroke-width: 2; }
+    .control { fill: none; stroke: #7eb9ed; stroke-width: 1.5; stroke-dasharray: 5 5; opacity: .75; }
+    .primary { fill: none; stroke: #e3b16a; stroke-width: 3; }
+    .alternate { fill: none; stroke: #91e3c1; stroke-width: 3; }
+    .path-label { font-size: 13px; text-anchor: middle; }
+  </style>
+  <rect width="1120" height="490" rx="12" fill="#0a1016"/>
+  <text class="title" x="36" y="44">One reference. Two paths.</text>
+  <text class="sub" x="36" y="69">Mininet · Open vSwitch · OS-Ken</text>
+  <text class="sub" x="1084" y="43" text-anchor="end">LINUX VM</text>
+
+  <path class="control" d="M430 132H317V272M730 132H797V272"/>
+  <rect x="430" y="95" width="300" height="78" rx="9" fill="#142720" stroke="#34594b"/>
+  <text class="name" x="580" y="119">OS-Ken controller</text>
+  <text class="detail" x="580" y="142">OpenFlow 1.3 · TCP 6653</text>
+  <text class="detail" x="580" y="160">Installs flow rules on s1–s4</text>
+
+  <path class="access" d="M221 290H275M221 405H245V309H275M839 290H920M839 309H883V409H920"/>
+  <path class="primary" d="M359 285H415V233H500M584 233H691V285H755"/>
+  <path class="alternate" d="M359 315H415V388H500M584 388H691V315H755"/>
+  <text class="path-label" x="542" y="196" style="fill:#e3b16a">Path A · primary · 10 Mbps</text>
+  <text class="path-label" x="542" y="348" style="fill:#91e3c1">Path B · alternate · 50 Mbps</text>
+
+  <rect class="node" x="36" y="255" width="185" height="70" rx="9"/>
+  <text class="name" x="128.5" y="283">Three clients</text>
+  <text class="detail" x="128.5" y="306">Time sync · UDP 12300</text>
+  <rect class="node" x="36" y="374" width="185" height="62" rx="9"/>
+  <text class="name" x="128.5" y="399">Background sender</text>
+  <text class="detail" x="128.5" y="420">iperf · UDP 5001</text>
+
+  <rect class="switch" x="275" y="272" width="84" height="56" rx="8"/>
+  <text class="name" x="317" y="306">s1</text>
+  <rect class="switch" x="500" y="205" width="84" height="56" rx="8"/>
+  <text class="name" x="542" y="239">s2</text>
+  <rect class="switch" x="500" y="360" width="84" height="56" rx="8"/>
+  <text class="name" x="542" y="394">s3</text>
+  <rect class="switch" x="755" y="272" width="84" height="56" rx="8"/>
+  <text class="name" x="797" y="306">s4</text>
+
+  <rect x="920" y="255" width="164" height="70" rx="9" fill="#142720" stroke="#34594b" stroke-width="1.5"/>
+  <text class="name" x="1002" y="283">Reference server</text>
+  <text class="detail" x="1002" y="306">UDP 12300</text>
+  <rect class="node" x="920" y="378" width="164" height="62" rx="9"/>
+  <text class="name" x="1002" y="403">Traffic sink</text>
+  <text class="detail" x="1002" y="424">UDP 5001</text>
+
+  <text class="sub" x="36" y="468">Under load: sync moves to Path B; background traffic stays on Path A.</text>
+</svg>

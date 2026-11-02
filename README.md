@@ -26,6 +26,8 @@ Want to explore before running the VM? Open `web/index.html` in a browser, or ru
 clocks drift, send an exchange, and change the network conditions. The evidence
 section shows archived VM results.
 
+![TimeSync browser lab showing three client clocks synchronized with the reference server](assets/browser-lab.jpg)
+
 ## Present it in ten minutes
 
 | Time | Action | What to explain |
@@ -46,13 +48,7 @@ Other controls: `1` checks the environment, `2` / `3` run a single mode,
 
 ## What happens on the network
 
-```text
-                      Path A · 10 Mbps
-                  ┌────── s2 ──────┐
-clients + load ── s1               s4 ── reference + sink
-                  └────── s3 ──────┘
-                      Path B · 50 Mbps
-```
+![TimeSync architecture: OS-Ken controls four switches; Path A passes through s2 at 10 Mbps and Path B through s3 at 50 Mbps](assets/architecture.svg)
 
 Each comparison mode runs three phases: normal synchronization, UDP background
 load, then load plus 50 ms delay and 15 ms jitter on Path A. Baseline stays on A.
@@ -94,6 +90,11 @@ Clock error is recorded **after each attempt**, not continuously between replies
 RTT uses successful replies only. Timeouts are failed attempts, not a packet-capture
 loss rate. Queue treatment and rerouting change together, and Path B has more
 capacity. Do not attribute every improvement to one mechanism.
+
+![Mean clock error and round-trip delay for all five recorded baseline and optimized comparisons](assets/vm-results.png)
+
+Each pair shows one run's mean. The graph uses the
+[audited VM results](evaluation/reference/audit.json), ordered by run timestamp.
 
 `evaluation/reference/` preserves five real comparisons and one recovery test.
 Recalculate them with `.venv/bin/python -m evaluation.audit_results`. Export new
