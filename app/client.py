@@ -78,9 +78,10 @@ class TimeSyncClient:
             t3 = self.clock.get_time()
             resp_pkt = TimeSyncPacket.from_bytes(data)
 
-            if resp_pkt.pkt_type != PKT_TYPE_RESPONSE or resp_pkt.seq_num != self.seq_num or resp_pkt.client_id != self.client_id or resp_pkt.t0 != t0: # checking pkt for validation(same pkt or different pkt)
-                logging.warning(f"Ignored mismatched response (seq {resp_pkt.seq_num}, expected {self.seq_num})")
-                return
+            if (resp_pkt.pkt_type != PKT_TYPE_RESPONSE or resp_pkt.seq_num != self.seq_num
+                    or resp_pkt.client_id != self.client_id or resp_pkt.t0 != t0):
+                # Use the failure path below so this attempt remains in the CSV.
+                raise ValueError('Response type, sequence, client ID, or timestamp does not match request')
 
             delay = calculate_delay(t0, resp_pkt.t1, resp_pkt.t2, t3)
             offset = calculate_offset(t0, resp_pkt.t1, resp_pkt.t2, t3)
