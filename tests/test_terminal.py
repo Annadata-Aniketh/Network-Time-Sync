@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluation.benchmark import wait_until
-from scripts.terminal import Terminal
+from scripts.terminal import Terminal, result_takeaways
 
 
 class TestTerminal(unittest.TestCase):
@@ -59,6 +59,58 @@ class TestTerminal(unittest.TestCase):
             with Terminal(io.StringIO()).logs():
                 raise RuntimeError('experiment failed')
         self.assertEqual(root.handlers, previous)
+
+    def test_unterminated_csv_row_is_not_presented_as_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'client1.csv'
+            path.write_text('seq,status,rtt_ms\n1,SUCCESS,22\n2,SUCCESS,7')
+            terminal = Terminal(io.StringIO())
+            terminal.state = {'directory': directory}
+            terminal.read_samples()
+            self.assertEqual(terminal.clients[0]['seq'], '1')
+            path.write_text(path.read_text() + '\n')
+            terminal.read_samples()
+            self.assertEqual(terminal.clients[0]['seq'], '2')
+
+    def test_phase_cues_explain_what_is_changing(self):
+        terminal = Terminal(io.StringIO())
+        for phase, mode, expected in [('Phase 1: Normal', 'baseline', 'drift'),
+                                      ('Phase 2: iperf Congestion', 'optimized', 'Path B'),
+                                      ('Phase 3: NetEm Delay+Jitter', 'baseline', 'bias'),
+                                      ('Phase 3: Recovery (load stopped)', 'optimized', 'three')]:
+            with self.subTest(phase=phase):
+                terminal.state = dict(phase=phase, mode=mode)
+                self.assertIn(expected, ' '.join(terminal.phase_context()))
+
+    def test_guided_walkthrough_can_go_back_and_quit_without_starting_network(self):
+        stream = io.StringIO()
+        terminal = Terminal(stream)
+        terminal.interactive = True
+        with patch('builtins.input', side_effect=['', 'b', 'q']), \
+                patch('scripts.terminal.time.sleep'):
+            terminal.explain()
+        self.assertIn('02 / 06', stream.getvalue())
+        self.assertNotIn('03 / 06', stream.getvalue())
+        self.assertEqual(terminal.frame_lines, 0)
+
+    def test_wrapped_frame_counts_every_physical_line(self):
+        stream = io.StringIO()
+        terminal = Terminal(stream)
+        terminal.interactive = True
+        with patch('scripts.terminal.shutil.get_terminal_size', return_value=__import__('os').terminal_size((45, 30))):
+            terminal.draw(['  ' + 'a simple explanation ' * 6, '  Done.'])
+        self.assertEqual(terminal.frame_lines, len(stream.getvalue().splitlines()))
+        self.assertNotIn('...', stream.getvalue())
+
+    def test_result_takeaway_reports_slower_convergence_honestly(self):
+        notes = result_takeaways('| Mean Clock Error (ms) | 50 | 1 | +98% |\n'
+                                 '| Convergence Time (s) | 1 | 3 | -200% |')
+        self.assertIn('lower', notes[0])
+        self.assertIn('slower', notes[1])
+
+    def test_result_takeaway_handles_worse_and_unavailable_results(self):
+        self.assertIn('higher', result_takeaways('| Mean Clock Error (ms) | 1 | 5 | -400% |')[0])
+        self.assertEqual(result_takeaways('| Mean Clock Error (ms) | N/A | nan | N/A |'), [])
 
 
 class TestDemoSchedule(unittest.TestCase):

@@ -149,15 +149,15 @@ function updateFrame() {
     const polls = Math.min(3, Math.floor(state.elapsed / 2));
     $("detail-value").textContent = `${polls} / 3 low-load polls`;
   }
-  const drifts = [20, -15, 30];
   for (let i = 0; i < 3; i++) {
-    let value = 100 + drifts[i] * state.elapsed;
-    if (state.scene === 1) value = state.elapsed > 3 ? 0 : 100;
-    else if (state.scene > 1)
-      value =
-        loaded && active === "a" ? 20 + Math.sin(state.elapsed + i) * 6 : 0;
     $("clock-" + (i + 1)).textContent =
-      `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(1)} ms`;
+      state.scene === 0
+        ? "Virtual clock drifts"
+        : state.scene === 1
+          ? "Four timestamps"
+          : active === "b"
+            ? "Sync via Path B"
+            : "Sync via Path A";
   }
   $("scene-progress").style.width = `${Math.min(100, state.elapsed * 10)}%`;
   packets.forEach((packet, i) => {
@@ -222,6 +222,8 @@ $("previous").addEventListener("click", () => selectScene(state.scene - 1));
 $("next").addEventListener("click", () => selectScene(state.scene + 1));
 document.addEventListener("keydown", (e) => {
   if (e.target.closest("button,input,select,textarea,a,summary")) return;
+  const bounds = $("lab").getBoundingClientRect();
+  if (bounds.top > innerHeight / 2 || bounds.bottom < innerHeight / 2) return;
   if (e.key === "ArrowRight") {
     e.preventDefault();
     selectScene(state.scene + 1);

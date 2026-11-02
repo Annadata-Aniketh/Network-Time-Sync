@@ -24,6 +24,17 @@ DATA_DIR = REPO_ROOT / 'evaluation' / 'runs'
 CLIENT_DRIFTS = [0.020, -0.015, 0.030]
 
 
+def check_controller_port(port=6653):
+    with socket.socket() as probe:
+        # A stopped controller can leave accepted connections in TIME_WAIT.
+        # Match the listener's reuse policy while still rejecting a live listener.
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind(('127.0.0.1', port))
+        except OSError as error:
+            raise RuntimeError(f'Controller port {port} is already in use.') from error
+
+
 def check_environment():
     if not sys.platform.startswith('linux') or os.geteuid() != 0:
         raise RuntimeError('Run in the Linux VM with sudo; Mininet needs root.')
@@ -31,11 +42,7 @@ def check_environment():
                if shutil.which(cmd) is None]
     if missing:
         raise RuntimeError('Missing commands: ' + ', '.join(missing))
-    with socket.socket() as probe:
-        try:
-            probe.bind(('127.0.0.1', 6653))
-        except OSError as error:
-            raise RuntimeError('Controller port 6653 is already in use.') from error
+    check_controller_port()
     # Check the same interpreter that will run the controller and clients.
     subprocess.run([sys.executable, '-c', 'import mininet.net; import os_ken.cmd.manager'], check=True)
     subprocess.run(['ovs-vsctl', 'show'], check=True, stdout=subprocess.DEVNULL)

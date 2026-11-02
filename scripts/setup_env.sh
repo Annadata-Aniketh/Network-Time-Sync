@@ -1,24 +1,36 @@
 #!/usr/bin/env bash
-# Install the Linux VM tools. Run from the repository root with sudo.
+# Install the tested Linux runtime, isolated from the OS-managed Python.
 set -euo pipefail
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 if [[ "$(uname -s)" != Linux || "$EUID" -ne 0 ]]; then
-    echo 'Run this script with sudo inside the Linux VM.' >&2
+    echo 'Run ./timesync inside the Linux VM; it requests sudo when needed.' >&2
     exit 1
 fi
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo 'Setup supports Ubuntu 24.04 and Linux Mint 22 (APT-based Linux).' >&2
+    exit 1
+fi
+if ! python3 -c 'import sys; sys.exit(sys.version_info[:2] != (3, 12))'; then
+    echo 'The tested runtime is Python 3.12. Use Ubuntu 24.04 or Linux Mint 22.' >&2
+    exit 1
+fi
+if [[ -x .venv/bin/python ]] && ! .venv/bin/python -c 'import sys; sys.exit(sys.version_info[:2] != (3, 12))'; then
+    echo 'The existing .venv uses a different Python. Rename it, then rerun ./timesync setup.' >&2
+    exit 1
+fi
+printf '\nTimeSync setup · Linux VM / Python 3.12\n'
 apt-get update
 apt-get install -y mininet openvswitch-switch iperf iproute2 tcpdump \
     python3 python3-pip python3-venv python3-dev
 service openvswitch-switch start
-# Keep pip packages isolated from the OS-managed Python. Mininet comes from apt;
-# expose that package to the venv so the benchmark can import it.
 if [[ ! -x .venv/bin/python ]]; then
     python3 -m venv --system-site-packages .venv
 fi
-# Avoid downloading pip itself; the venv's bundled pip can install these packages.
-# Older pip versions do not retry every interrupted download, so retry the install
-# as well as individual connections. Completed downloads remain in pip's cache.
+# Mininet comes from APT; include system packages even in an existing venv.
+if ! .venv/bin/python -c 'import mininet.net' 2>/dev/null; then
+    python3 -m venv --system-site-packages .venv
+fi
 for attempt in 1 2 3; do
     echo "Installing Python dependencies (attempt $attempt/3)..."
     if .venv/bin/python -m pip --disable-pip-version-check install \
@@ -26,10 +38,12 @@ for attempt in 1 2 3; do
         break
     fi
     if [[ "$attempt" -eq 3 ]]; then
-        echo 'Dependency installation failed. Check the error above and your VM internet connection, then rerun setup.' >&2
+        echo 'Download failed. Check the error above, then rerun ./timesync setup; completed downloads are cached.' >&2
         exit 1
     fi
-    echo 'Installation did not finish; retrying with cached downloads...'
+    echo 'Retrying with cached downloads...'
 done
 .venv/bin/python -c 'import mininet.net; import os_ken.cmd.manager; import pandas; import matplotlib'
-echo 'Dependencies imported successfully. Start the menu: sudo bash scripts/run_demo.sh'
+# Write the marker only after installation and imports succeed.
+cp requirements.txt .venv/.timesync-requirements
+printf '\nReady. Start with ./timesync, then press i for the guided walkthrough.\n'

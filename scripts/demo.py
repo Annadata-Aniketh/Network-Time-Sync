@@ -74,8 +74,8 @@ def menu(duration=60.0, color=True):
             elif choice == 'h':
                 terminal.guide()
             elif choice == 'w':
-                terminal.notice('Open web/index.html, or run in another terminal:')
-                terminal.line('  python3 -m http.server 8080 --bind 127.0.0.1 --directory web')
+                terminal.notice('Try the interactive clocks: open web/index.html, or run:')
+                terminal.line('  ./timesync web')
                 terminal.line('  Browser: http://localhost:8080')
             else:
                 terminal.notice('Choose one of the listed options.', 'amber')

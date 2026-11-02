@@ -9,6 +9,12 @@
     />
     <title>TimeSync — A shared sense of time</title>
     <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%230a1016' stroke='%2391e3c1' stroke-width='2'/%3E%3Cpath d='M16 7v10h8' fill='none' stroke='%2391e3c1' stroke-width='2'/%3E%3C/svg%3E"
+    />
+    <script defer src="clock-model.js"></script>
+    <script defer src="clock-lab.js"></script>
     <script defer src="results.js"></script>
     <script defer src="app.js"></script>
   </head>
@@ -21,8 +27,9 @@
         ></a
       >
       <nav aria-label="Main navigation">
-        <a href="#lab">Explore</a><a href="#protocol">Protocol</a
-        ><a href="#evidence">Evidence</a><a href="#demo">Demo</a>
+        <a href="#clocks">Try it</a><a href="#lab">Network</a
+        ><a href="#protocol">Protocol</a><a href="#evidence">Evidence</a
+        ><a href="#demo">Demo</a>
       </nav>
       <span class="offline-label"><span></span> Works offline</span>
     </header>
@@ -32,26 +39,186 @@
           <p class="eyebrow">UDP APPLICATION · OPENFLOW 1.3 · LINUX</p>
           <h1>A shared sense <em>of time.</em></h1>
           <p class="lede">
-            Three drifting clocks. Two network paths. Follow a timestamp through
-            the network and see why the route it takes changes the time it
-            tells.
+            A clock can tick perfectly and still tell the wrong time. Let three
+            clocks drift, then bring them back together. You control the network
+            they use to find the time.
           </p>
         </div>
         <div class="intro-note">
-          <span class="mono">01 — 06</span>
+          <span class="mono">START WITH A QUESTION</span>
           <p>
-            A guided, interactive explanation of a working Mininet experiment.
+            What happens when a clock asks for the time over a busy network?
           </p>
-          <a href="#lab"
-            >Step inside the network <span aria-hidden="true">↘</span></a
+          <a href="#clocks"
+            >Try it yourself <span aria-hidden="true">↘</span></a
           >
         </div>
+      </section>
+      <section id="clocks" class="clock-lab" aria-labelledby="clock-title">
+        <div class="clock-intro">
+          <div>
+            <span class="eyebrow">A LAB YOU CAN PLAY WITH</span>
+            <h2 id="clock-title">Make the clocks agree.</h2>
+            <p>
+              They start 100 milliseconds ahead. Each ticks at a different
+              rate.<br />First watch the gap grow. Then enable synchronization.
+            </p>
+          </div>
+          <span class="model-badge">Interactive model · not live VM data</span>
+        </div>
+        <div class="experiment-actions">
+          <button id="sync-toggle" class="primary-action" aria-pressed="false">
+            Enable synchronization
+          </button>
+          <button id="traffic-toggle" aria-pressed="false">
+            Add congestion
+          </button>
+          <div
+            class="mode-switch"
+            role="group"
+            aria-label="Clock lab network policy"
+          >
+            <button data-clock-policy="baseline" aria-pressed="true">
+              Baseline</button
+            ><button data-clock-policy="optimized" aria-pressed="false">
+              SDN optimized
+            </button>
+          </div>
+        </div>
+        <div class="reference-clock">
+          <div>
+            <span class="eyebrow">REFERENCE SERVER</span
+            ><strong id="reference-time">10:00:00.000</strong>
+          </div>
+          <p>The shared reference.<br />The clients adjust themselves.</p>
+          <span id="clock-route">Path A · clear</span>
+        </div>
+        <div class="client-clocks">
+          <article class="client-clock" data-client="0">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 01</span><small>Runs fast · +20 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+          <article class="client-clock" data-client="1">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 02</span><small>Runs slow · −15 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+          <article class="client-clock" data-client="2">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 03</span><small>Runs fast · +30 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+        </div>
+        <div class="clock-observation" role="status" aria-live="polite">
+          <span class="eyebrow">WHAT TO NOTICE</span>
+          <p id="clock-observation">
+            Without requests, no clock knows it is wrong. Their gaps keep
+            changing.
+          </p>
+        </div>
+        <div class="clock-timeline">
+          <div class="timeline-heading">
+            <div>
+              <h3>The gap, over time</h3>
+              <p>
+                Sharp jumps are corrections. Slopes between replies are drift.
+              </p>
+            </div>
+            <span id="model-elapsed">0.0 simulated seconds</span>
+          </div>
+          <svg
+            id="error-timeline"
+            viewBox="0 0 960 210"
+            role="img"
+            aria-labelledby="timeline-title timeline-desc"
+          >
+            <title id="timeline-title">
+              Client clock error over simulated time
+            </title>
+            <desc id="timeline-desc">
+              Three traces show signed error relative to the server. Zero means
+              the clocks agree. Current values are shown in the client cards.
+            </desc>
+            <g id="timeline-grid"></g>
+            <g id="timeline-traces"></g>
+            <text x="480" y="206" class="timeline-axis-title">
+              Simulated time (seconds)
+            </text>
+          </svg>
+          <div class="timeline-legend">
+            <span>● Client 01</span><span>● Client 02</span
+            ><span>● Client 03</span><span>0 ms = server time</span>
+          </div>
+        </div>
+        <div class="model-controls">
+          <div class="model-playback">
+            <button id="clock-play">Pause time</button
+            ><button id="clock-step">Step +1 second</button
+            ><button id="clock-send">Send one exchange</button
+            ><button id="clock-reset">Reset lab</button>
+          </div>
+          <label
+            >Sync every <output id="sync-interval-value">1 s</output
+            ><input
+              id="sync-interval"
+              aria-label="Synchronization interval"
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.5"
+              value="1" /></label
+          ><label
+            >Clock drift <output id="drift-value">1×</output
+            ><input
+              id="drift-scale"
+              aria-label="Clock drift multiplier"
+              type="range"
+              min="0"
+              max="2"
+              step="0.25"
+              value="1"
+          /></label>
+        </div>
+        <div class="clock-challenges">
+          <span>TRY THIS</span
+          ><button data-challenge="drift">1. Watch drift</button
+          ><button data-challenge="sync">2. Bring them together</button
+          ><button data-challenge="busy">3. Make the path busy</button
+          ><button data-challenge="reroute">4. Find a better path</button>
+        </div>
+        <p class="clock-model-note">
+          This deterministic model shows signed error continuously. The real VM
+          records absolute error after each attempt. Artificial drift is
+          exaggerated for visibility; synchronization corrects time, not the
+          ticking rate. A busy primary path adds 90 ms to the forward trip in
+          this model. The recorded results below come from separate, real
+          experiments.
+        </p>
       </section>
       <section id="lab" class="lab" aria-labelledby="lab-title">
         <div class="lab-top">
           <div>
             <span class="eyebrow">THE NETWORK, EXPLAINED</span>
-            <h2 id="lab-title">Watch the system work</h2>
+            <h2 id="lab-title">Now follow the packets.</h2>
           </div>
           <div
             class="mode-switch"
@@ -536,10 +703,10 @@
               <span></span><span></span><span></span><small>Linux VM</small>
             </div>
             <pre><span class="terminal-muted"># Start the real experiment</span>
-sudo bash scripts/run_demo.sh
+./timesync
 
 <span class="terminal-muted"># Open this explainer locally</span>
-python3 -m http.server 8080 --bind 127.0.0.1 --directory web
+./timesync web
 
 <span class="terminal-muted"># Browser address</span>
 http://localhost:8080</pre>

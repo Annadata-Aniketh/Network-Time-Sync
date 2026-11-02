@@ -74,6 +74,22 @@ class TestTimeSyncProtocol(unittest.TestCase):
         offset = calculate_offset(t0, t1, t2, t3)
         self.assertAlmostEqual(offset, -0.01, places=6)
 
+    def test_non_finite_timestamps_are_rejected_at_the_wire(self):
+        for stamp in [float('nan'), float('inf'), -float('inf')]:
+            for field in ['t0', 't1', 't2']:
+                with self.subTest(stamp=stamp, field=field):
+                    packet = TimeSyncPacket(PKT_TYPE_RESPONSE, 1, 1, **{field: stamp})
+                    with self.assertRaisesRegex(ValueError, 'finite'):
+                        TimeSyncPacket.from_bytes(packet.to_bytes())
+
+    def test_impossible_or_overflowing_timestamp_math_is_rejected(self):
+        for timestamps in [(10, 10.05, 10.06, 10.005), (10, 10.06, 10.05, 10.13),
+                           (0, 0, 0, float('nan')), (-1e308, 0, 0, 1e308)]:
+            with self.subTest(timestamps=timestamps), self.assertRaises(ValueError):
+                calculate_delay(*timestamps)
+        with self.assertRaises(ValueError):
+            calculate_offset(-1e308, 1e308, 1e308, -1e308)
+
     def test_repr_formatting(self):
         """Verify string representation of packet."""
         pkt = TimeSyncPacket(PKT_TYPE_REQUEST, client_id=1, seq_num=5, t0=10.0)

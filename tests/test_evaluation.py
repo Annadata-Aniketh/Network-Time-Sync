@@ -143,6 +143,21 @@ class TestConnectivityDiagnostics(unittest.TestCase):
 
 
 class TestControllerStartup(unittest.TestCase):
+    def test_live_listener_is_rejected_but_closed_connection_can_be_reused(self):
+        from evaluation.benchmark import check_controller_port
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(('127.0.0.1', 0))
+            port = listener.getsockname()[1]
+            listener.listen()
+            with self.assertRaisesRegex(RuntimeError, 'already in use'):
+                check_controller_port(port)
+            with socket.create_connection(('127.0.0.1', port), timeout=1) as client:
+                peer, _ = listener.accept()
+                peer.close()  # Active server close leaves TIME_WAIT on this port.
+                self.assertEqual(client.recv(1), b'')
+        check_controller_port(port)
+
     def test_waits_through_refused_connections(self):
         from evaluation.benchmark import wait_for_controller
         process = Mock()

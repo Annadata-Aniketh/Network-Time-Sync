@@ -1288,3 +1288,454 @@ footer > a:last-child {
     color: var(--muted);
   }
 }
+
+/* Clock playground: inputs and effects stay together above the network tour. */
+.clock-lab {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 30px;
+  margin-bottom: 64px;
+  background: #0d151d;
+  scroll-margin-top: 24px;
+}
+.clock-intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  align-items: start;
+}
+.clock-intro h2 {
+  font-size: clamp(29px, 3vw, 42px);
+  line-height: 1.2;
+  letter-spacing: -1.2px;
+  font-weight: 500;
+  margin: 0 0 15px;
+}
+.clock-intro p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+.model-badge {
+  font: 10px var(--mono);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 9px 13px;
+  white-space: nowrap;
+}
+.experiment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 25px 0;
+  flex-wrap: wrap;
+}
+.experiment-actions > button,
+.model-playback button {
+  padding: 10px 15px;
+  border: 1px solid #344652;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+}
+.experiment-actions > button:hover,
+.model-playback button:hover {
+  border-color: var(--mint);
+}
+.experiment-actions .primary-action {
+  background: var(--mint);
+  color: #0b1914;
+  border-color: var(--mint);
+  font-weight: 650;
+}
+.experiment-actions > button[aria-pressed="true"]:not(.primary-action) {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: #30261c;
+}
+.experiment-actions .mode-switch {
+  margin-left: auto;
+}
+.reference-clock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 22px 25px;
+  background: #142720;
+  border: 1px solid #34594b;
+  border-radius: 8px;
+}
+.reference-clock .eyebrow {
+  margin-bottom: 8px;
+  font-size: 9px;
+}
+.reference-clock strong {
+  font: 29px var(--mono);
+  letter-spacing: -1px;
+  color: var(--mint);
+}
+.reference-clock p {
+  color: #adbdaf;
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0 auto 0 10px;
+}
+.reference-clock > span {
+  font: 11px var(--mono);
+  color: var(--mint);
+  text-align: right;
+}
+.client-clocks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.client-clock {
+  --client-color: var(--mint);
+  padding: 22px 20px;
+  background: #111c25;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+.client-clock:nth-child(2) {
+  --client-color: var(--blue);
+}
+.client-clock:nth-child(3) {
+  --client-color: var(--amber);
+}
+.clock-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font: 10px var(--mono);
+  color: var(--client-color);
+}
+.clock-card-title span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.clock-card-title i {
+  display: inline-block;
+  background: var(--client-color);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.clock-card-title small {
+  font: 10px var(--sans);
+  color: var(--muted);
+}
+.clock-time {
+  display: block;
+  font: clamp(15px, 2.2vw, 26px) var(--mono);
+  margin-top: 25px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.7px;
+}
+.clock-gap {
+  margin: 17px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.clock-gap b {
+  font: 24px var(--mono);
+  color: var(--client-color);
+}
+.clock-gap span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.alignment-track {
+  height: 6px;
+  background: #25353e;
+  position: relative;
+  margin: 22px 0;
+  border-radius: 3px;
+}
+.alignment-track i {
+  width: 1px;
+  height: 16px;
+  top: -5px;
+  left: 50%;
+  background: #c6d0d4;
+  position: absolute;
+}
+.alignment-track span {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  top: -1.5px;
+  background: var(--client-color);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+.client-clock.aligned {
+  border-color: #3c6c5b;
+}
+.clock-last {
+  font: 10px/1.6 var(--mono);
+  min-height: 32px;
+  color: var(--muted);
+}
+.clock-observation {
+  margin: 23px 0;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px;
+  border-left: 2px solid var(--mint);
+  padding-left: 17px;
+  align-items: center;
+  min-height: 58px;
+}
+.clock-observation .eyebrow {
+  margin: 0;
+  font-size: 9px;
+}
+.clock-observation p {
+  margin: 0;
+  color: #bfccd4;
+  font-size: 13px;
+}
+.clock-timeline {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 22px 0;
+}
+.timeline-heading {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.timeline-heading h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+.timeline-heading p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+.timeline-heading > span {
+  font: 10px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+#error-timeline {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 15px;
+  overflow: visible;
+}
+#error-timeline text {
+  fill: var(--muted);
+  font: 10px var(--mono);
+}
+#error-timeline .timeline-axis-title {
+  text-anchor: middle;
+  font-size: 10px;
+}
+.timeline-legend {
+  display: flex;
+  gap: 22px;
+  font: 10px var(--mono);
+}
+.timeline-legend span:nth-child(1) {
+  color: var(--mint);
+}
+.timeline-legend span:nth-child(2) {
+  color: var(--blue);
+}
+.timeline-legend span:nth-child(3) {
+  color: var(--amber);
+}
+.timeline-legend span:last-child {
+  color: var(--muted);
+  margin-left: auto;
+}
+.model-controls {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 30px;
+  padding: 22px 0 8px;
+  align-items: center;
+}
+.model-playback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.model-playback button {
+  font-size: 10px;
+  padding: 8px 10px;
+}
+.model-controls label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.model-controls output {
+  color: var(--mint);
+  float: right;
+  font-family: var(--mono);
+}
+.model-controls input {
+  margin: 16px 0 0;
+}
+.clock-challenges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 22px 0 10px;
+}
+.clock-challenges > span {
+  color: var(--mint);
+  font: 9px var(--mono);
+  margin-right: 8px;
+}
+.clock-challenges button {
+  font-size: 11px;
+  color: #bfcdd4;
+  border-bottom: 1px dashed #405764;
+  padding: 5px 8px;
+}
+.clock-challenges button:hover {
+  color: var(--mint);
+}
+.clock-model-note {
+  color: #8fa1ac;
+  font-size: 10px;
+  line-height: 1.8;
+  margin: 15px 0 0;
+  max-width: 1000px;
+}
+@media (max-width: 1050px) {
+  .clock-intro {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .model-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .model-playback {
+    grid-column: 1 / -1;
+  }
+  .client-clock {
+    padding: 18px 14px;
+  }
+  .experiment-actions .mode-switch {
+    margin-left: 0;
+  }
+}
+@media (max-width: 760px) {
+  .clock-lab {
+    padding: 21px 17px;
+    margin-bottom: 40px;
+  }
+  .clock-intro p {
+    font-size: 12px;
+  }
+  .experiment-actions {
+    gap: 8px;
+  }
+  .experiment-actions > button {
+    padding: 11px;
+    font-size: 11px;
+  }
+  .experiment-actions .mode-switch {
+    width: 100%;
+  }
+  .reference-clock {
+    flex-wrap: wrap;
+    padding: 18px;
+    gap: 15px;
+  }
+  .reference-clock strong {
+    font-size: 25px;
+  }
+  .reference-clock p {
+    display: none;
+  }
+  .reference-clock > span {
+    text-align: left;
+    font-size: 10px;
+  }
+  .client-clocks {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .client-clock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 10px;
+    align-items: center;
+  }
+  .clock-time {
+    font-size: 18px;
+    margin: 0;
+    text-align: right;
+  }
+  .clock-gap {
+    margin: 13px 0 0;
+  }
+  .clock-gap b {
+    font-size: 20px;
+  }
+  .clock-gap span {
+    font-size: 10px;
+  }
+  .alignment-track {
+    margin: 22px 0 15px;
+  }
+  .clock-last {
+    grid-column: 1/-1;
+    margin-top: 10px;
+    min-height: 16px;
+    font-size: 9px;
+  }
+  .clock-observation {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    min-height: 105px;
+  }
+  .clock-observation p {
+    font-size: 12px;
+  }
+  .timeline-heading {
+    flex-direction: column;
+    gap: 10px;
+    align-items: start;
+  }
+  .timeline-legend {
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 8px;
+  }
+  .timeline-legend span:last-child {
+    width: 100%;
+    margin: 0;
+  }
+  #error-timeline {
+    min-height: 150px;
+  }
+  .model-controls {
+    gap: 25px;
+  }
+  .clock-challenges {
+    gap: 8px;
+  }
+  .clock-challenges button {
+    font-size: 10px;
+  }
+  nav {
+    gap: 10px;
+  }
+}
