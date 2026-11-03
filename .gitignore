@@ -4,3 +4,6 @@ __pycache__/
 data/*.csv
 plots/*.png
 .venv/
+evaluation/runs/
+
+tmp/

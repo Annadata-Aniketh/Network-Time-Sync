@@ -1,124 +1,237 @@
-#!/usr/bin/env python3
-"""
-Unit and Integration Tests for Member 3 Deliverables
-Course: UE25CS243A: Computer Networks — Team 11 (Project #23)
-Tests:
-  - app/background_traffic.py (UDP receiver, sender, and helpers)
-  - evaluation/benchmark.py (Local proxy, latency calculation, and CSV telemetry schema)
-  - evaluation/plot_results.py (Summary table calculation, statistics, and plot generation)
-"""
+"""Regression checks for benchmark measurements and result reporting."""
 
-import os
-import shutil
+import csv
+import socket
 import tempfile
-import time
 import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
 import pandas as pd
 
-from app.background_traffic import (
-    SocketTrafficReceiver,
-    SocketTrafficSender,
-    start_background_traffic,
-)
-from evaluation.benchmark import (
-    EmulatedNetworkProxy,
-    run_benchmark_scenario_local,
-    write_csv,
-    CSV_HEADER,
-)
-from evaluation.plot_results import (
-    compute_summary_table,
-    calculate_convergence_time,
-)
+from app.client import VirtualClock
+from app.protocol import PKT_TYPE_RESPONSE, TimeSyncPacket
+from evaluation.benchmark import check_environment, write_csv
+from evaluation.sync_worker import CSV_HEADER, phase_at, sample
+from evaluation.plot_results import calculate_convergence_time, compute_summary_table, load_datasets
 
 
-class TestBackgroundTraffic(unittest.TestCase):
-    """Verifies pure-Python background traffic sender and receiver."""
+class TestBenchmarkMeasurements(unittest.TestCase):
+    def test_timeout_has_no_fabricated_delay(self):
+        sock = Mock()
+        sock.recv.side_effect = socket.timeout
+        clock = VirtualClock(initial_offset=.1, drift_rate=0)
+        row = sample(sock, clock, 1, 1)
+        self.assertEqual(row['status'], 'TIMEOUT')
+        self.assertEqual(row['rtt_ms'], '')
+        self.assertEqual(row['jitter_ms'], '')
+        self.assertEqual(clock.correction, 0)
 
-    def test_sender_and_receiver_communication(self):
-        port = 15001
-        receiver = SocketTrafficReceiver(host="127.0.0.1", port=port)
-        
-        # Test basic initialization and attributes
-        sender = SocketTrafficSender(target_ip="127.0.0.1", port=port, rate_mbps=1.0)
-        self.assertEqual(sender.target_ip, "127.0.0.1")
-        self.assertEqual(sender.port, port)
-        self.assertEqual(receiver.port, port)
+    def test_invalid_response_does_not_adjust_clock(self):
+        for data in [b'bad packet', TimeSyncPacket(PKT_TYPE_RESPONSE, 2, 1, t0=10).to_bytes()]:
+            with self.subTest(data=data):
+                clock = Mock()
+                clock.get_time.return_value = 10
+                sock = Mock()
+                sock.recv.return_value = data
+                row = sample(sock, clock, 1, 1)
+                self.assertEqual(row['status'], 'INVALID')
+                clock.adjust.assert_not_called()
 
+    def test_valid_response_math_and_correction(self):
+        clock = Mock()
+        clock.get_time.side_effect = [10, 10.13, 10.13]
+        sock = Mock()
+        sock.recv.return_value = TimeSyncPacket(PKT_TYPE_RESPONSE, 1, 1, 10, 10.05, 10.06).to_bytes()
+        row = sample(sock, clock, 1, 1)
+        self.assertEqual(row['status'], 'SUCCESS')
+        self.assertAlmostEqual(row['rtt_ms'], 120)
+        clock.adjust.assert_called_once()
+        self.assertAlmostEqual(clock.adjust.call_args.args[0], -.01)
 
-class TestBenchmarkHarness(unittest.TestCase):
-    """Verifies benchmark proxy logic and CSV schema validation."""
+    def test_csv_schema_and_phase_boundaries(self):
+        self.assertIn('Normal', phase_at(0, 60))
+        self.assertIn('Congestion', phase_at(20, 60))
+        self.assertIn('NetEm', phase_at(40, 60))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'metrics.csv'
+            write_csv(path, [dict.fromkeys(CSV_HEADER, '')])
+            with path.open() as stream:
+                self.assertEqual(next(csv.reader(stream)), CSV_HEADER)
 
-    def setUp(self):
-        self.test_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self.test_dir, ignore_errors=True)
-
-    def test_emulated_proxy_latencies(self):
-        proxy = EmulatedNetworkProxy(mode="baseline")
-        proxy.set_phase("Phase 1: Normal")
-        fwd, rev = proxy._calculate_latencies()
-        self.assertGreater(fwd, 0.5)
-        self.assertLess(fwd, 10.0)
-
-        proxy.set_phase("Phase 2: iperf Congestion")
-        fwd_cong, rev_cong = proxy._calculate_latencies()
-        self.assertGreater(fwd_cong, 15.0)
-
-        # Optimized mode should maintain low latency even in Phase 2
-        proxy_opt = EmulatedNetworkProxy(mode="sdn_optimized")
-        proxy_opt.set_phase("Phase 2: iperf Congestion")
-        fwd_opt, rev_opt = proxy_opt._calculate_latencies()
-        self.assertLess(fwd_opt, 8.0)
-
-    def test_local_benchmark_run_and_schema(self):
-        """Runs a short 1-second benchmark run and validates CSV schema."""
-        records = run_benchmark_scenario_local(mode="baseline", duration_sec=1.0, interval_sec=0.5)
-        self.assertGreater(len(records), 0)
-
-        # Check required columns
-        for col in CSV_HEADER:
-            self.assertIn(col, records[0])
-
-        out_csv = os.path.join(self.test_dir, "test_metrics.csv")
-        write_csv(out_csv, records)
-        self.assertTrue(os.path.exists(out_csv))
-
-        df = pd.read_csv(out_csv)
-        self.assertEqual(list(df.columns), CSV_HEADER)
-        self.assertIn("Phase 1: Normal", df["phase"].values)
+    def test_no_non_linux_fallback(self):
+        with patch('evaluation.benchmark.sys.platform', 'darwin'):
+            with self.assertRaisesRegex(RuntimeError, 'Linux VM'):
+                check_environment()
 
 
-class TestPlotResults(unittest.TestCase):
-    """Verifies summary statistics and table formatting."""
+class TestResults(unittest.TestCase):
+    def test_unconfirmed_convergence_is_unavailable(self):
+        frame = pd.DataFrame({'elapsed_sec': [0, 1, 2], 'true_residual_error_ms': [20, 1, 1]})
+        self.assertTrue(pd.isna(calculate_convergence_time(frame)))
 
-    def test_summary_table_computation(self):
-        data_base = {
-            "elapsed_sec": [1.0, 2.0, 3.0, 4.0],
-            "rtt_ms": [40.0, 50.0, 45.0, 60.0],
-            "jitter_ms": [10.0, 15.0, 12.0, 14.0],
-            "true_residual_error_ms": [25.0, 22.0, 24.0, 26.0],
-            "phase": ["Phase 1: Normal"] * 4,
-        }
-        data_opt = {
-            "elapsed_sec": [1.0, 2.0, 3.0, 4.0],
-            "rtt_ms": [4.0, 4.2, 4.1, 4.3],
-            "jitter_ms": [0.5, 0.4, 0.5, 0.6],
-            "true_residual_error_ms": [1.2, 1.1, 1.0, 0.9],
-            "phase": ["Phase 1: Normal"] * 4,
-        }
+    def test_convergence_requires_all_clients_and_successful_rounds(self):
+        rows = [dict(seq=seq, client_id=client, elapsed_sec=seq,
+                     true_residual_error_ms=1, status='SUCCESS')
+                for seq in range(1, 4) for client in [1, 2, 3]]
+        frame = pd.DataFrame(rows)
+        self.assertEqual(calculate_convergence_time(frame), 3)
+        frame.loc[0, 'status'] = 'TIMEOUT'
+        self.assertTrue(pd.isna(calculate_convergence_time(frame)))
+        self.assertTrue(pd.isna(calculate_convergence_time(pd.DataFrame(rows[1:]))))
 
-        df_base = pd.DataFrame(data_base)
-        df_opt = pd.DataFrame(data_opt)
+    def test_summary_excludes_failed_delay_and_reports_failures(self):
+        frame = pd.DataFrame(dict(elapsed_sec=[0, 1, 2], rtt_ms=[10, 20, 999],
+                                  jitter_ms=[0, 10, 999], true_residual_error_ms=[1, 1, 30],
+                                  status=['SUCCESS', 'SUCCESS', 'TIMEOUT']))
+        stats, summary = compute_summary_table(frame, frame)
+        self.assertEqual(stats['Mean RTT (ms)'][0], 15)
+        self.assertAlmostEqual(stats['Failed samples (%)'][0], 100 / 3)
+        self.assertIn('N/A', summary)
+        self.assertNotIn('sub-millisecond', summary)
 
-        stats, md_table = compute_summary_table(df_base, df_opt)
-        self.assertIn("Mean RTT (ms)", stats)
-        self.assertIn("SDN-Optimized Mode", md_table)
-        self.assertIn("+91", md_table)  # Check improvement string
+    def test_legacy_results_require_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(FileNotFoundError):
+                load_datasets(directory)
+
+class TestMininetStartupCleanup(unittest.TestCase):
+    def test_failed_build_stops_partial_network_and_controller(self):
+        import sys
+        import types
+        from evaluation.benchmark import run_benchmark_scenario_mininet
+
+        network = Mock()
+        network.build.side_effect = Exception('interface creation failed')
+        constructor = Mock(return_value=network)
+        net_module = types.ModuleType('mininet.net')
+        net_module.Mininet = constructor
+        node_module = types.ModuleType('mininet.node')
+        node_module.RemoteController = Mock()
+        node_module.OVSSwitch = Mock()
+        link_module = types.ModuleType('mininet.link')
+        link_module.TCLink = Mock()
+        process = Mock()
+        process.poll.return_value = None
+        modules = {'mininet.net': net_module, 'mininet.node': node_module, 'mininet.link': link_module}
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(sys.modules, modules), \
+                patch('evaluation.benchmark.wait_for_controller'), \
+                patch('evaluation.benchmark.subprocess.Popen', return_value=process):
+            with self.assertRaisesRegex(RuntimeError, 'interface creation failed'):
+                run_benchmark_scenario_mininet('baseline', directory)
+        self.assertFalse(constructor.call_args.kwargs['build'])
+        network.stop.assert_called_once()
+        process.terminate.assert_called_once()
+        network.start.assert_not_called()
 
 
-if __name__ == "__main__":
+class TestConnectivityDiagnostics(unittest.TestCase):
+    def test_failed_pair_is_logged_and_reported(self):
+        import io
+        from evaluation.benchmark import check_connectivity
+        first, second = Mock(), Mock()
+        first.name, second.name = 'h_load', 'h_client1'
+        first.cmd.return_value = '2 packets transmitted, 0 received'
+        second.cmd.return_value = '2 packets transmitted, 2 received'
+        net = Mock(hosts=[first, second])
+        net._parsePing.side_effect = [(2, 0), (2, 2)]
+        log = io.StringIO()
+        self.assertEqual(check_connectivity(net, log), 50)
+        self.assertIn('h_load -> h_client1: FAILED', log.getvalue())
+        self.assertIn('h_client1 -> h_load: OK', log.getvalue())
+
+
+class TestControllerStartup(unittest.TestCase):
+    def test_live_listener_is_rejected_but_closed_connection_can_be_reused(self):
+        from evaluation.benchmark import check_controller_port
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(('127.0.0.1', 0))
+            port = listener.getsockname()[1]
+            listener.listen()
+            with self.assertRaisesRegex(RuntimeError, 'already in use'):
+                check_controller_port(port)
+            with socket.create_connection(('127.0.0.1', port), timeout=1) as client:
+                peer, _ = listener.accept()
+                peer.close()  # Active server close leaves TIME_WAIT on this port.
+                self.assertEqual(client.recv(1), b'')
+        check_controller_port(port)
+
+    def test_waits_through_refused_connections(self):
+        from evaluation.benchmark import wait_for_controller
+        process = Mock()
+        process.poll.return_value = None
+        with patch('evaluation.benchmark.socket.create_connection',
+                   side_effect=[ConnectionRefusedError(), MagicMock()]) as connect, \
+                patch('evaluation.benchmark.time.sleep') as sleep:
+            wait_for_controller(process)
+        self.assertEqual(connect.call_count, 2)
+        sleep.assert_called_once_with(.1)
+
+    def test_exited_controller_is_reported_immediately(self):
+        from evaluation.benchmark import wait_for_controller
+        process = Mock()
+        process.poll.return_value = 1
+        with patch('evaluation.benchmark.socket.create_connection') as connect:
+            with self.assertRaisesRegex(RuntimeError, 'exited during startup'):
+                wait_for_controller(process)
+        connect.assert_not_called()
+
+    def test_listener_wait_has_a_deadline(self):
+        from evaluation.benchmark import wait_for_controller
+        process = Mock()
+        process.poll.return_value = None
+        with patch('evaluation.benchmark.time.monotonic', side_effect=[0, 0, 16]), \
+                patch('evaluation.benchmark.time.sleep'), \
+                patch('evaluation.benchmark.socket.create_connection', side_effect=ConnectionRefusedError()):
+            with self.assertRaisesRegex(RuntimeError, 'did not listen'):
+                wait_for_controller(process)
+
+
+class TestRecoveryEvidence(unittest.TestCase):
+    def test_phase_label_for_recovery(self):
+        from evaluation.sync_worker import RECOVERY_PHASE
+        self.assertEqual(phase_at(40, 60, recovery=True), RECOVERY_PHASE)
+        self.assertIn('NetEm', phase_at(40, 60))
+
+    def test_recovery_requires_all_packet_evidence(self):
+        from evaluation.benchmark import verify_recovery
+        from evaluation.sync_worker import RECOVERY_PHASE
+        for case in ['pass', 'no-reroute', 'rules-remain', 'no-return-traffic', 'missing-client']:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                logs = root / 'optimized'
+                logs.mkdir()
+                reroute = 'n_packets=20, priority=200,udp,tp_dst=12300 actions=output:6\n'
+                original = 'n_packets=10, priority=100,udp,tp_dst=12300 actions=set_queue:1,output:5\n'
+                restored = original.replace('n_packets=10', 'n_packets=30')
+                (logs / 'phase2-s1-flows.txt').write_text(original + (reroute if case != 'no-reroute' else ''))
+                (logs / 'phase3-s1-flows.txt').write_text(original if case == 'no-return-traffic' else restored)
+                for switch in ['s3', 's4']:
+                    (logs / f'phase3-{switch}-flows.txt').write_text('priority=10 actions=output:1\n')
+                if case == 'rules-remain':
+                    (logs / 'phase3-s3-flows.txt').write_text(reroute)
+                rows = [dict(client_id=f'h_client{client}', phase=RECOVERY_PHASE, status='SUCCESS')
+                        for client in range(1, 4 if case != 'missing-client' else 3)]
+                with patch('builtins.print'):
+                    if case == 'pass':
+                        result = verify_recovery(root, rows)
+                        self.assertTrue(result['passed'])
+                        self.assertEqual(result['path_a_packets_after'], 30)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, 'not verified'):
+                            verify_recovery(root, rows)
+                self.assertTrue((root / 'recovery_check.json').exists())
+                self.assertIn('PASS' if case == 'pass' else 'FAIL', (root / 'summary_metrics.md').read_text())
+
+    def test_short_recovery_test_rejected_before_startup(self):
+        from evaluation.benchmark import run_benchmark
+        with patch('evaluation.benchmark.check_environment') as check:
+            with self.assertRaisesRegex(ValueError, 'at least 60 seconds'):
+                run_benchmark(scenario='recovery', duration=9)
+            check.assert_not_called()
+
+
+if __name__ == '__main__':
     unittest.main()

@@ -1,8 +1,9 @@
 import unittest
 import threading
-import time
 import os
-import shutil
+import socket
+import tempfile
+from evaluation.sync_worker import sample
 from app.server import TimeServer
 from app.client import TimeSyncClient, VirtualClock
 
@@ -10,24 +11,36 @@ from app.client import TimeSyncClient, VirtualClock
 class TestTimeSyncIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test_port = 12850
-        cls.server = TimeServer(host="127.0.0.1", port=cls.test_port, max_workers=2)
+        cls.server = TimeServer(host="127.0.0.1", port=0, max_workers=2)
         cls.server_thread = threading.Thread(target=cls.server.start, daemon=True)
         cls.server_thread.start()
-        time.sleep(0.2)  # Give server time to bind
+        if not cls.server.ready.wait(timeout=3) or not cls.server.running:
+            raise RuntimeError('Test server did not start')
+        cls.test_port = cls.server.port
 
     @classmethod
     def tearDownClass(cls):
         cls.server.running = False
-        time.sleep(0.1)
+        cls.server_thread.join(timeout=3)
+        if cls.server_thread.is_alive():
+            raise RuntimeError('Test server did not stop')
 
     def setUp(self):
-        self.test_csv_dir = "data/test_integration"
-        os.makedirs(self.test_csv_dir, exist_ok=True)
+        self.directory = tempfile.TemporaryDirectory()
+        self.test_csv_dir = self.directory.name
 
     def tearDown(self):
-        if os.path.exists(self.test_csv_dir):
-            shutil.rmtree(self.test_csv_dir, ignore_errors=True)
+        self.directory.cleanup()
+
+    def test_benchmark_sample_with_real_server(self):
+        clock = VirtualClock(initial_offset=.1, drift_rate=0)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(1)
+            sock.connect(('127.0.0.1', self.test_port))
+            row = sample(sock, clock, client_id=1, seq=1)
+        self.assertEqual(row['status'], 'SUCCESS')
+        self.assertGreaterEqual(row['rtt_ms'], 0)
+        self.assertLess(row['true_residual_error_ms'], 30)
 
     def test_client_server_step_sync(self):
         """Verify client connects to server and converges using step adjustment."""

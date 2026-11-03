@@ -1,4 +1,5 @@
 import struct
+import math
 # constants
 MAGIC = b"NTPS"
 VERSION = 1
@@ -43,14 +44,21 @@ class TimeSyncPacket:
         
         if magic != MAGIC:
             raise ValueError(f"Invalid magic number: {magic!r}, expected {MAGIC!r}")
+
+        if not all(math.isfinite(stamp) for stamp in (t0, t1, t2)):
+            raise ValueError('Packet timestamps must be finite')
             
         return cls(pkt_type, client_id, seq_num, t0, t1, t2)
 
 # Mathematical calculations
 def calculate_delay(t0: float, t1: float, t2: float, t3: float):
     delay = (t3 - t0) - (t2 - t1)
+    if not math.isfinite(delay) or delay < 0 or t2 < t1:
+        raise ValueError('Invalid timestamp order or round-trip delay')
     return delay
 def calculate_offset(t0: float, t1: float, t2: float, t3: float):
     offset = ((t1-t0)+(t2-t3))/2.0
+    if not math.isfinite(offset):
+        raise ValueError('Clock offset must be finite')
     return offset
 

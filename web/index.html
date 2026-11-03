@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="An interactive guide to UDP clock synchronization, SDN prioritization, rerouting, and recovery, with recorded Linux VM results."
+    />
+    <title>TimeSync — A shared sense of time</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%230a1016' stroke='%2391e3c1' stroke-width='2'/%3E%3Cpath d='M16 7v10h8' fill='none' stroke='%2391e3c1' stroke-width='2'/%3E%3C/svg%3E"
+    />
+    <script defer src="clock-model.js"></script>
+    <script defer src="clock-lab.js"></script>
+    <script defer src="results.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="wordmark" href="#"
+        ><span class="brand-mark" aria-hidden="true"></span>timesync<span
+          class="wordmark-sub"
+          >/ network lab</span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#clocks">Try it</a><a href="#lab">Network</a
+        ><a href="#protocol">Protocol</a><a href="#evidence">Evidence</a
+        ><a href="#demo">Demo</a>
+      </nav>
+      <span class="offline-label"><span></span> Works offline</span>
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">UDP APPLICATION · OPENFLOW 1.3 · LINUX</p>
+          <h1>A shared sense <em>of time.</em></h1>
+          <p class="lede">
+            A clock can tick perfectly and still tell the wrong time. Let three
+            clocks drift, then bring them back together. You control the network
+            they use to find the time.
+          </p>
+        </div>
+        <div class="intro-note">
+          <span class="mono">START WITH A QUESTION</span>
+          <p>
+            What happens when a clock asks for the time over a busy network?
+          </p>
+          <a href="#clocks"
+            >Try it yourself <span aria-hidden="true">↘</span></a
+          >
+        </div>
+      </section>
+      <section id="clocks" class="clock-lab" aria-labelledby="clock-title">
+        <div class="clock-intro">
+          <div>
+            <span class="eyebrow">A LAB YOU CAN PLAY WITH</span>
+            <h2 id="clock-title">Make the clocks agree.</h2>
+            <p>
+              They start 100 milliseconds ahead. Each ticks at a different
+              rate.<br />First watch the gap grow. Then enable synchronization.
+            </p>
+          </div>
+        </div>
+        <div class="experiment-actions">
+          <button id="sync-toggle" class="primary-action" aria-pressed="false">
+            Enable synchronization
+          </button>
+          <button id="traffic-toggle" aria-pressed="false">
+            Add congestion
+          </button>
+          <div
+            class="mode-switch"
+            role="group"
+            aria-label="Clock lab network policy"
+          >
+            <button data-clock-policy="baseline" aria-pressed="true">
+              Baseline</button
+            ><button data-clock-policy="optimized" aria-pressed="false">
+              SDN optimized
+            </button>
+          </div>
+        </div>
+        <div class="reference-clock">
+          <div>
+            <span class="eyebrow">REFERENCE SERVER</span
+            ><strong id="reference-time">10:00:00.000</strong>
+          </div>
+          <p>The shared reference.<br />The clients adjust themselves.</p>
+          <span id="clock-route">Path A · clear</span>
+        </div>
+        <div class="client-clocks">
+          <article class="client-clock" data-client="0">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 01</span><small>Runs fast · +20 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+          <article class="client-clock" data-client="1">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 02</span><small>Runs slow · −15 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+          <article class="client-clock" data-client="2">
+            <div class="clock-card-title">
+              <span><i></i> CLIENT 03</span><small>Runs fast · +30 ms/s</small>
+            </div>
+            <strong class="clock-time">10:00:00.100</strong>
+            <div class="clock-gap">
+              <b>+100.0 ms</b><span>ahead of server</span>
+            </div>
+            <div class="alignment-track"><i></i><span></span></div>
+            <div class="clock-last">No correction yet</div>
+          </article>
+        </div>
+        <div class="clock-observation" role="status" aria-live="polite">
+          <span class="eyebrow">WHAT TO NOTICE</span>
+          <p id="clock-observation">
+            Without requests, no clock knows it is wrong. Their gaps keep
+            changing.
+          </p>
+        </div>
+        <div class="clock-timeline">
+          <div class="timeline-heading">
+            <div>
+              <h3>The gap, over time</h3>
+              <p>
+                Sharp jumps are corrections. Slopes between replies are drift.
+              </p>
+            </div>
+            <span id="model-elapsed">0.0 s elapsed</span>
+          </div>
+          <svg
+            id="error-timeline"
+            viewBox="0 0 960 210"
+            role="img"
+            aria-labelledby="timeline-title timeline-desc"
+          >
+            <title id="timeline-title">Client clock error over time</title>
+            <desc id="timeline-desc">
+              Three traces show signed error relative to the server. Zero means
+              the clocks agree. Current values are shown in the client cards.
+            </desc>
+            <g id="timeline-grid"></g>
+            <g id="timeline-traces"></g>
+            <text x="480" y="206" class="timeline-axis-title">
+              Time (seconds)
+            </text>
+          </svg>
+          <div class="timeline-legend">
+            <span>● Client 01</span><span>● Client 02</span
+            ><span>● Client 03</span><span>0 ms = server time</span>
+          </div>
+        </div>
+        <div class="model-controls">
+          <div class="model-playback">
+            <button id="clock-play">Pause time</button
+            ><button id="clock-step">Step +1 second</button
+            ><button id="clock-send">Send one exchange</button
+            ><button id="clock-reset">Reset lab</button>
+          </div>
+          <label
+            >Sync every <output id="sync-interval-value">1 s</output
+            ><input
+              id="sync-interval"
+              aria-label="Synchronization interval"
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.5"
+              value="1" /></label
+          ><label
+            >Clock drift <output id="drift-value">1×</output
+            ><input
+              id="drift-scale"
+              aria-label="Clock drift multiplier"
+              type="range"
+              min="0"
+              max="2"
+              step="0.25"
+              value="1"
+          /></label>
+        </div>
+        <div class="clock-challenges">
+          <span>TRY THIS</span
+          ><button data-challenge="drift">1. Watch drift</button
+          ><button data-challenge="sync">2. Bring them together</button
+          ><button data-challenge="busy">3. Make the path busy</button
+          ><button data-challenge="reroute">4. Find a better path</button>
+        </div>
+        <p class="clock-model-note">
+          Clock controls run in your browser. Use ./timesync in the Linux VM to
+          collect network measurements; recorded results appear below.
+        </p>
+      </section>
+      <section id="lab" class="lab" aria-labelledby="lab-title">
+        <div class="lab-top">
+          <div>
+            <span class="eyebrow">THE NETWORK, EXPLAINED</span>
+            <h2 id="lab-title">Now follow the packets.</h2>
+          </div>
+          <div class="mode-switch" role="group" aria-label="Network policy">
+            <button data-mode="baseline" aria-pressed="false">Baseline</button
+            ><button data-mode="optimized" aria-pressed="true">
+              SDN optimized
+            </button>
+          </div>
+        </div>
+        <div class="lab-layout">
+          <aside class="chapters" aria-label="Walkthrough chapters">
+            <button data-scene="0" aria-current="step">
+              <span>01</span>
+              <div>Clocks drift<small>One reference, three clients</small></div>
+            </button>
+            <button data-scene="1">
+              <span>02</span>
+              <div>
+                Exchange timestamps<small>Four moments, one correction</small>
+              </div>
+            </button>
+            <button data-scene="2">
+              <span>03</span>
+              <div>Add congestion<small>Packets compete for space</small></div>
+            </button>
+            <button data-scene="3">
+              <span>04</span>
+              <div>
+                Change the path<small>Let the controller respond</small>
+              </div>
+            </button>
+            <button data-scene="4">
+              <span>05</span>
+              <div>
+                Recover automatically<small>Return when load clears</small>
+              </div>
+            </button>
+            <button data-scene="5">
+              <span>06</span>
+              <div>
+                Check the evidence<small>Real measurements, not guesses</small>
+              </div>
+            </button>
+          </aside>
+          <div class="network-stage">
+            <div class="stage-heading">
+              <span id="scene-number" class="mono">01 / 06</span
+              ><span id="route-label" class="route-label">Primary path A</span>
+            </div>
+            <div class="diagram-viewport">
+              <svg
+                id="network"
+                viewBox="0 0 960 430"
+                role="img"
+                aria-labelledby="network-title network-description"
+              >
+                <title id="network-title">
+                  UDP synchronization over two network paths
+                </title>
+                <desc id="network-description">
+                  Three clients and a load sender connect to switch s1. The
+                  primary path passes through s2 to s4 and the reference server.
+                  The alternate path passes through s3. The controller changes
+                  the route under load.
+                </desc>
+                <defs>
+                  <pattern
+                    id="dots"
+                    width="24"
+                    height="24"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <circle cx="2" cy="2" r=".7" fill="#273442" />
+                  </pattern>
+                </defs>
+                <rect width="960" height="430" fill="url(#dots)" />
+                <g class="wires">
+                  <path
+                    d="M170 155H215V220H265M170 220H265M170 285H215V220M170 365H235V220H265"
+                  />
+                  <path d="M760 220H820M760 220V350H820" />
+                </g>
+                <path
+                  id="path-a"
+                  class="network-path path-a active"
+                  d="M320 220H365V120H650V220H710"
+                />
+                <path
+                  id="path-b"
+                  class="network-path path-b"
+                  d="M320 220H365V320H650V220H710"
+                />
+                <path
+                  class="control-wire"
+                  d="M505 66V94M448 44H293V194M562 44H735V194"
+                />
+                <g class="node controller">
+                  <rect x="419" y="20" width="172" height="48" rx="8" />
+                  <text x="505" y="42">OS-Ken controller</text>
+                  <text class="small" x="505" y="57">
+                    OpenFlow 1.3 · TCP 6653
+                  </text>
+                </g>
+                <g class="node host">
+                  <rect x="36" y="130" width="134" height="50" rx="8" />
+                  <text x="56" y="151" text-anchor="start">client 01</text>
+                  <text
+                    id="clock-1"
+                    x="56"
+                    y="168"
+                    class="small"
+                    text-anchor="start"
+                  >
+                    +100.0 ms
+                  </text>
+                  <circle class="clock-hand" cx="147" cy="155" r="11" />
+                  <path class="clock-tick" d="M147 148V155L153 158" />
+                </g>
+                <g class="node host">
+                  <rect x="36" y="195" width="134" height="50" rx="8" />
+                  <text x="56" y="216" text-anchor="start">client 02</text>
+                  <text
+                    id="clock-2"
+                    x="56"
+                    y="233"
+                    class="small"
+                    text-anchor="start"
+                  >
+                    +100.0 ms
+                  </text>
+                  <circle class="clock-hand" cx="147" cy="220" r="11" />
+                  <path class="clock-tick" d="M147 213V220L153 223" />
+                </g>
+                <g class="node host">
+                  <rect x="36" y="260" width="134" height="50" rx="8" />
+                  <text x="56" y="281" text-anchor="start">client 03</text>
+                  <text
+                    id="clock-3"
+                    x="56"
+                    y="298"
+                    class="small"
+                    text-anchor="start"
+                  >
+                    +100.0 ms
+                  </text>
+                  <circle class="clock-hand" cx="147" cy="285" r="11" />
+                  <path class="clock-tick" d="M147 278V285L153 288" />
+                </g>
+                <g id="load-host" class="node load">
+                  <rect x="36" y="342" width="134" height="46" rx="8" />
+                  <text x="103" y="362">Background load</text>
+                  <text class="small" x="103" y="378">
+                    UDP 5001 · 12M offered
+                  </text>
+                </g>
+                <g class="node switch">
+                  <rect x="265" y="194" width="55" height="52" rx="8" />
+                  <text x="292" y="225">s1</text>
+                </g>
+                <g class="node switch">
+                  <rect x="480" y="94" width="55" height="52" rx="8" />
+                  <text x="507" y="125">s2</text>
+                </g>
+                <g class="node switch">
+                  <rect x="480" y="294" width="55" height="52" rx="8" />
+                  <text x="507" y="325">s3</text>
+                </g>
+                <g class="node switch">
+                  <rect x="710" y="194" width="50" height="52" rx="8" />
+                  <text x="735" y="225">s4</text>
+                </g>
+                <g class="node reference">
+                  <rect x="820" y="192" width="119" height="56" rx="8" />
+                  <text x="879" y="215">Reference</text>
+                  <text x="879" y="234" class="small">UDP 12300</text>
+                </g>
+                <g class="node">
+                  <rect x="820" y="329" width="119" height="42" rx="8" />
+                  <text x="879" y="354" class="small">Background sink</text>
+                </g>
+                <text x="389" y="103" class="path-caption">PATH A</text>
+                <text x="578" y="103" class="path-caption">10 Mbps</text>
+                <text x="389" y="349" class="path-caption">PATH B</text>
+                <text x="578" y="349" class="path-caption">50 Mbps</text>
+                <g id="queue-packets" class="queue-packets">
+                  <rect x="333" y="160" width="8" height="18" rx="2" />
+                  <rect x="345" y="160" width="8" height="18" rx="2" />
+                  <rect x="357" y="160" width="8" height="18" rx="2" />
+                  <rect x="369" y="160" width="8" height="18" rx="2" />
+                  <text x="355" y="151">queue builds</text>
+                </g>
+                <g id="timestamp-tags">
+                  <text id="stamp-client" x="215" y="185">t0 →</text>
+                  <text id="stamp-server" x="787" y="180">t1 / t2</text>
+                </g>
+                <g id="packet-layer"></g>
+              </svg>
+            </div>
+            <div class="diagram-hint">
+              Swipe the diagram to inspect the full network →
+            </div>
+            <div class="legend">
+              <span><i class="sync-dot"></i>Time-sync request</span
+              ><span><i class="reply-dot"></i>Server reply</span
+              ><span><i class="load-dot"></i>Background traffic</span>
+            </div>
+            <div class="playback">
+              <button
+                id="play"
+                class="play-button"
+                aria-label="Play the animated walkthrough"
+              >
+                ▶ <span>Play walkthrough</span>
+              </button>
+              <div class="scene-progress" aria-hidden="true">
+                <span id="scene-progress"></span>
+              </div>
+              <button id="previous" aria-label="Previous chapter">←</button
+              ><button id="next" aria-label="Next chapter">→</button
+              ><span class="keyboard-hint">← → to explore</span>
+            </div>
+          </div>
+        </div>
+        <div class="scene-explanation" aria-live="polite">
+          <div>
+            <span id="scene-kicker" class="eyebrow">THE PROBLEM</span>
+            <h3 id="scene-title">Every clock drifts.</h3>
+          </div>
+          <p id="scene-copy">
+            Each client has a virtual clock that runs at a slightly different
+            rate. Without correction, their timestamps move apart. One server
+            gives them a common reference.
+          </p>
+          <div class="scene-detail">
+            <span id="detail-label">Virtual clocks only</span
+            ><strong id="detail-value">+20 / −15 / +30 ms/s</strong
+            ><small id="detail-note"
+              >Artificial drift rates used in the experiment</small
+            >
+          </div>
+        </div>
+      </section>
+      <section id="protocol" class="protocol section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">INSIDE A SINGLE EXCHANGE</span>
+            <h2>Four timestamps.<br />One useful estimate.</h2>
+          </div>
+          <p>
+            UDP keeps the request and reply simple. The client records the send
+            and receive times. The server adds its own receive and send times.
+            No system clock is changed.
+          </p>
+        </div>
+        <div class="protocol-grid">
+          <div class="timestamp-flow">
+            <div>
+              <span>t0</span>
+              <p>Client sends<small id="t0">100.100 s</small></p>
+              <i>→</i>
+            </div>
+            <div>
+              <span>t1</span>
+              <p>Server receives<small id="t1">100.010 s</small></p>
+              <i>↓</i>
+            </div>
+            <div>
+              <span>t2</span>
+              <p>Server replies<small id="t2">100.012 s</small></p>
+              <i>←</i>
+            </div>
+            <div>
+              <span>t3</span>
+              <p>Client receives<small id="t3">100.122 s</small></p>
+              <i>↺</i>
+            </div>
+          </div>
+          <div class="math-model">
+            <span class="eyebrow">TRY AN UNEQUAL PATH</span>
+            <p class="model-note">
+              The client starts 100 ms ahead; server processing takes 2 ms.
+            </p>
+            <label for="forward"
+              >Forward delay <output id="forward-value">10 ms</output></label
+            ><input
+              id="forward"
+              type="range"
+              min="2"
+              max="100"
+              value="10"
+            /><label for="reverse"
+              >Reverse delay <output id="reverse-value">10 ms</output></label
+            ><input id="reverse" type="range" min="2" max="100" value="10" />
+            <div class="equation">
+              <code>RTT = (t3 − t0) − (t2 − t1)</code
+              ><strong id="rtt-model">20 ms</strong>
+            </div>
+            <div class="equation">
+              <code>offset = ((t1 − t0) + (t2 − t3)) / 2</code
+              ><strong id="offset-model">−100 ms</strong>
+            </div>
+            <p id="asymmetry-note" class="asymmetry-note">
+              Equal path delays give the correct offset. Residual error: 0 ms.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="policy section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">THE CONTROLLER'S JOB</span>
+            <h2>Give time a clearer path.</h2>
+          </div>
+          <p>
+            Queue treatment and routing work together. The controller reacts to
+            measured traffic load; it does not read the client's clock or
+            directly measure queue delay.
+          </p>
+        </div>
+        <div class="policy-steps">
+          <article>
+            <span>01 / CLASSIFY</span>
+            <h3>Recognize the flow</h3>
+            <p>
+              UDP port 12300 identifies sync traffic. Queue 1 reserves bandwidth
+              at the Path A edge. UDP background traffic enters queue 2, capped
+              at 6 Mbps.
+            </p>
+          </article>
+          <article>
+            <span>02 / RESPOND</span>
+            <h3>Find another route</h3>
+            <p>
+              Poll s1 port 5 every 2 seconds. At 4 Mbps or above, priority-200
+              rules move sync requests and replies through s3 on Path B.
+            </p>
+          </article>
+          <article>
+            <span>03 / RECOVER</span>
+            <h3>Return automatically</h3>
+            <p>
+              Three consecutive polls below the threshold remove the reroute
+              rules. The original Path A rules remain. Flow counters verify that
+              traffic returned.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section id="evidence" class="evidence section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">RECORDED LINUX VM EXPERIMENTS</span>
+            <h2>The evidence, in numbers.</h2>
+          </div>
+          <p>
+            Five 60-second comparisons and a separate recovery test. These are
+            archived measurements, independently recalculated from CSVs.
+          </p>
+        </div>
+        <div class="evidence-highlights">
+          <div>
+            <span>Optimized mean clock error</span
+            ><strong>1.03–1.16<small> ms</small></strong>
+            <p>Range of five per-run means</p>
+          </div>
+          <div>
+            <span>Successful optimized samples</span
+            ><strong>1,800<small> / 1,800</small></strong>
+            <p>Zero timeouts or invalid replies</p>
+          </div>
+          <div>
+            <span>Automatic recovery</span
+            ><strong>Verified<small> ✓</small></strong>
+            <p>Path A counter: 132 → 204</p>
+          </div>
+        </div>
+        <div class="results-toolbar">
+          <div role="group" aria-label="Recorded result metric">
+            <button data-metric="Mean Clock Error (ms)" aria-pressed="true">
+              Clock error</button
+            ><button data-metric="Mean RTT (ms)" aria-pressed="false">
+              Round-trip delay</button
+            ><button data-metric="Failed samples (%)" aria-pressed="false">
+              Failed samples
+            </button>
+          </div>
+          <div class="chart-key">
+            <span><i></i>Baseline</span><span><i></i>Optimized</span>
+          </div>
+        </div>
+        <div
+          id="result-chart"
+          class="result-chart"
+          role="img"
+          aria-label="Five trial comparison of baseline and optimized mean clock error"
+        ></div>
+        <details>
+          <summary>Inspect the exact values and run IDs <span>+</span></summary>
+          <div class="table-wrap">
+            <table>
+              <caption>
+                Recorded measurements for the selected metric
+              </caption>
+              <thead>
+                <tr>
+                  <th>Run</th>
+                  <th>Baseline</th>
+                  <th>Optimized</th>
+                </tr>
+              </thead>
+              <tbody id="result-table"></tbody>
+            </table>
+          </div>
+        </details>
+        <p class="measurement-note">
+          Clock error is sampled immediately after correction. RTT uses
+          successful replies only. Baseline timeouts are not a packet-capture
+          loss rate. Initial convergence varied; optimized mode was slower in
+          two trials. This compares QoS and rerouting together on paths of
+          different capacity.
+        </p>
+      </section>
+      <section id="demo" class="demo section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">A TEN-MINUTE WALKTHROUGH</span>
+            <h2>Explain it. Then run it.</h2>
+          </div>
+          <p>
+            Run the Mininet experiment from the terminal. Follow the client
+            measurements and saved flow counters to verify route changes.
+          </p>
+        </div>
+        <div class="demo-layout">
+          <ol>
+            <li>
+              <span>00:00–02:00</span>
+              <p>
+                Explain the network and four timestamps using the walkthrough
+                above or terminal option <code>i</code>.
+              </p>
+            </li>
+            <li>
+              <span>02:00–05:00</span>
+              <p>
+                Run a 60-second-per-mode comparison with option <code>4</code>.
+                Narrate congestion and the controller's route change.
+              </p>
+            </li>
+            <li>
+              <span>05:00–07:00</span>
+              <p>
+                Generate plots with <code>5</code> and inspect the summary with
+                <code>6</code>. Explain both failures and improvements.
+              </p>
+            </li>
+            <li>
+              <span>07:00–09:00</span>
+              <p>
+                Run recovery with <code>9</code>. Stop the load and watch the
+                controller return to Path A.
+              </p>
+            </li>
+            <li>
+              <span>09:00–10:00</span>
+              <p>
+                Show the PASS checks and discuss symmetric-delay assumptions,
+                virtual clocks, and measurement limits.
+              </p>
+            </li>
+          </ol>
+          <div class="terminal-card">
+            <div>
+              <span></span><span></span><span></span><small>Linux VM</small>
+            </div>
+            <pre><span class="terminal-muted"># Start the real experiment</span>
+./timesync
+
+<span class="terminal-muted"># Open this explainer locally</span>
+./timesync web
+
+<span class="terminal-muted"># Browser address</span>
+http://localhost:8080</pre>
+            <p>
+              No build step. No internet required for the site. The animation
+              also opens directly from <code>web/index.html</code>.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <a class="wordmark" href="#"
+        >timesync<span class="wordmark-sub">/ network lab</span></a
+      >
+      <p>UDP synchronization · Mininet · Open vSwitch · OS-Ken</p>
+      <a href="#demo">Run it in your VM ↗</a>
+    </footer>
+    <noscript
+      ><p class="noscript">
+        JavaScript is needed for animations and interactive results. The
+        protocol and controller explanations remain readable above.
+      </p></noscript
+    >
+  </body>
+</html>

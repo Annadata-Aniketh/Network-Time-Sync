@@ -11,7 +11,7 @@ Topology Architecture:
          | (p5)  +---------------------------------------+ (p2) |
          |                                                      v (p5)
      [Switch s1]                                            [Switch s4] <---> h_server    (10.0.0.1,  p1)
-     Client Access                                          Server Access     h_bg_server (10.0.0.2,  p2)
+     Client Access                                          Server Access     h_sink (10.0.0.2,  p2)
          | (p6)  +---------------------------------------+ (p2) ^
          +------>|        Core Path B (Alternate)        |------+
                  | s3: 50 Mbps, 2ms delay, max_queue=1000| (p6)
@@ -22,7 +22,7 @@ Port & Addressing Plan:
       Port 1 -> h_client1   (10.0.0.11/24, MAC 00:00:00:00:00:11)
       Port 2 -> h_client2   (10.0.0.12/24, MAC 00:00:00:00:00:12)
       Port 3 -> h_client3   (10.0.0.13/24, MAC 00:00:00:00:00:13)
-      Port 4 -> h_bg_client (10.0.0.20/24, MAC 00:00:00:00:00:20) [iperf generator]
+      Port 4 -> h_load (10.0.0.20/24, MAC 00:00:00:00:00:20) [iperf generator]
       Port 5 -> s2 Port 1   [Path A uplink - 10 Mbps bottleneck]
       Port 6 -> s3 Port 1   [Path B uplink - 50 Mbps bypass]
   - Switch s2 (Path A Core):
@@ -33,7 +33,7 @@ Port & Addressing Plan:
       Port 2 -> s4 Port 6
   - Switch s4:
       Port 1 -> h_server    (10.0.0.1/24,  MAC 00:00:00:00:00:01) [UDP :12300]
-      Port 2 -> h_bg_server (10.0.0.2/24,  MAC 00:00:00:00:00:02) [iperf :5001]
+      Port 2 -> h_sink (10.0.0.2/24,  MAC 00:00:00:00:00:02) [iperf :5001]
       Port 5 -> s2 Port 2   [Path A downlink]
       Port 6 -> s3 Port 2   [Path B downlink]
 """
@@ -41,6 +41,7 @@ Port & Addressing Plan:
 import sys
 import subprocess
 import argparse
+import logging
 
 try:
     from mininet.topo import Topo
@@ -110,35 +111,36 @@ class TimeSyncTopo(Topo):
 
         # 2. Add Hosts with deterministic IP and MAC addresses
         h_server = self.addHost('h_server', ip='10.0.0.1/24', mac='00:00:00:00:00:01')
-        h_bg_server = self.addHost('h_bg_server', ip='10.0.0.2/24', mac='00:00:00:00:00:02')
+        h_sink = self.addHost('h_sink', ip='10.0.0.2/24', mac='00:00:00:00:00:02')
 
         h_client1 = self.addHost('h_client1', ip='10.0.0.11/24', mac='00:00:00:00:00:11')
         h_client2 = self.addHost('h_client2', ip='10.0.0.12/24', mac='00:00:00:00:00:12')
         h_client3 = self.addHost('h_client3', ip='10.0.0.13/24', mac='00:00:00:00:00:13')
-        h_bg_client = self.addHost('h_bg_client', ip='10.0.0.20/24', mac='00:00:00:00:00:20')
+        h_load = self.addHost('h_load', ip='10.0.0.20/24', mac='00:00:00:00:00:20')
 
+        # HFSC shapes link rates; OVS separately manages the application HTB queues.
         # 3. Host-to-switch access links (100 Mbps, 1ms delay, max_queue_size 1000)
-        # On s1: Port 1->h_client1, Port 2->h_client2, Port 3->h_client3, Port 4->h_bg_client
-        self.addLink(s1, h_client1, port1=1, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_client2, port1=2, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_client3, port1=3, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s1, h_bg_client, port1=4, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
+        # On s1: Port 1->h_client1, Port 2->h_client2, Port 3->h_client3, Port 4->h_load
+        self.addLink(s1, h_client1, port1=1, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_client2, port1=2, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_client3, port1=3, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s1, h_load, port1=4, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
 
-        # On s4: Port 1->h_server, Port 2->h_bg_server
-        self.addLink(s4, h_server, port1=1, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
-        self.addLink(s4, h_bg_server, port1=2, cls=TCLink, bw=100, delay='1ms', max_queue_size=1000)
+        # On s4: Port 1->h_server, Port 2->h_sink
+        self.addLink(s4, h_server, port1=1, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
+        self.addLink(s4, h_sink, port1=2, cls=TCLink, use_hfsc=True, bw=100, delay='1ms', max_queue_size=1000)
 
         # 4. Core Path A links (Primary Path, intentionally bottlenecked at 10 Mbps, queue=100)
         # s1 Port 5 <-> s2 Port 1
-        self.addLink(s1, s2, port1=5, port2=1, cls=TCLink, bw=10, delay='2ms', max_queue_size=100)
+        self.addLink(s1, s2, port1=5, port2=1, cls=TCLink, use_hfsc=True, bw=10, delay='2ms', max_queue_size=100)
         # s2 Port 2 <-> s4 Port 5
-        self.addLink(s2, s4, port1=2, port2=5, cls=TCLink, bw=10, delay='2ms', max_queue_size=100)
+        self.addLink(s2, s4, port1=2, port2=5, cls=TCLink, use_hfsc=True, bw=10, delay='2ms', max_queue_size=100)
 
         # 5. Core Path B links (Alternate Low-Latency Path, clean bypass: 50 Mbps, queue=1000)
         # s1 Port 6 <-> s3 Port 1
-        self.addLink(s1, s3, port1=6, port2=1, cls=TCLink, bw=50, delay='2ms', max_queue_size=1000)
+        self.addLink(s1, s3, port1=6, port2=1, cls=TCLink, use_hfsc=True, bw=50, delay='2ms', max_queue_size=1000)
         # s3 Port 2 <-> s4 Port 6
-        self.addLink(s3, s4, port1=2, port2=6, cls=TCLink, bw=50, delay='2ms', max_queue_size=1000)
+        self.addLink(s3, s4, port1=2, port2=6, cls=TCLink, use_hfsc=True, bw=50, delay='2ms', max_queue_size=1000)
 
 
 def _run_cmd(cmd: str):
@@ -151,13 +153,9 @@ def _run_cmd(cmd: str):
 
 
 def setup_qos_queues(net=None):
-    """
-    Configures Open vSwitch HTB QoS queues on Path A egress ports (s1-eth5, s4-eth5):
-      - Queue 0: Default fallback best-effort queue (min-rate=1Mbps, max-rate=10Mbps)
-      - Queue 1: High-Priority Time-Sync UDP 12300 (min-rate=2Mbps, max-rate=10Mbps, priority=1)
-      - Queue 2: Low-Priority Rate-Limited BG Traffic (min-rate=1Mbps, max-rate=6Mbps, priority=10)
-    """
+    """Configure HTB queues on the two Path A edge egress ports."""
     ports = ['s1-eth5', 's4-eth5']
+
     success = True
 
     for port in ports:
@@ -174,7 +172,7 @@ def setup_qos_queues(net=None):
         )
         code, out, err = _run_cmd(cmd)
         if code == 0:
-            print(f"[QoS] Configured HTB queues (0:Default, 1:TimeSync, 2:RateLimited) on {port}")
+            logging.info("QoS ready on %s: default / sync / background queues", port)
         else:
             print(f"[QoS Warning] Failed to configure QoS on {port}: {err.strip()}", file=sys.stderr)
             success = False
@@ -183,26 +181,15 @@ def setup_qos_queues(net=None):
 
 
 def inject_link_impairment(net=None, delay_ms: int = 50, jitter_ms: int = 15, loss_pct: float = 0.0):
-    """
-    Injects artificial network degradation on Primary Path A using Linux tc netem.
-    Applies asymmetric delay and jitter to s2-eth2 and s2-eth1 interfaces.
-    """
-    interfaces = ['s2-eth2', 's2-eth1']
-    loss_arg = f" loss {loss_pct}%" if loss_pct > 0 else ""
-
-    for dev in interfaces:
-        # Try replace first; fallback to add if no root qdisc exists
-        cmd_replace = f"tc qdisc replace dev {dev} root netem delay {delay_ms}ms {jitter_ms}ms distribution normal{loss_arg}"
-        code, out, err = _run_cmd(cmd_replace)
-        if code == 0:
-            print(f"[tc-netem] Injected impairment on {dev}: delay={delay_ms}ms +/- {jitter_ms}ms{loss_arg}")
-        else:
-            cmd_add = f"tc qdisc add dev {dev} root netem delay {delay_ms}ms {jitter_ms}ms distribution normal{loss_arg}"
-            code2, _, err2 = _run_cmd(cmd_add)
-            if code2 == 0:
-                print(f"[tc-netem] Added netem qdisc on {dev}: delay={delay_ms}ms +/- {jitter_ms}ms{loss_arg}")
-            else:
-                print(f"[tc-netem Warning] Failed to apply netem on {dev}: {err.strip()}", file=sys.stderr)
+    """Delay the forward Path A egress while retaining its 10 Mbps limit."""
+    if net is None:
+        raise ValueError('A running Mininet network is required')
+    result = net.get('s2').intf('s2-eth2').config(
+        bw=10, use_hfsc=True, delay=f'{delay_ms}ms', jitter=f'{jitter_ms}ms',
+        loss=loss_pct, max_queue_size=100,
+    )
+    if result.get('tcoutputs') and any(result['tcoutputs']):
+        raise RuntimeError(f'Could not apply link impairment: {result["tcoutputs"]}')
 
 
 def clear_link_impairment(net=None):

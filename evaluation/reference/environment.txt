@@ -1,0 +1,24 @@
+NAME="Linux Mint"
+VERSION="22.3 (Zena)"
+ID=linuxmint
+ID_LIKE="ubuntu debian"
+PRETTY_NAME="Linux Mint 22.3"
+VERSION_ID="22.3"
+HOME_URL="https://www.linuxmint.com/"
+SUPPORT_URL="https://forums.linuxmint.com/"
+BUG_REPORT_URL="http://linuxmint-troubleshooting-guide.readthedocs.io/en/latest/"
+PRIVACY_POLICY_URL="https://www.linuxmint.com/"
+VERSION_CODENAME=zena
+UBUNTU_CODENAME=noble
+7.0.0-42-generic
+06562b226e539ac83e0c094367e73d707b99dcde
+## codex/project-review-demo...origin/codex/project-review-demo
+iperf	2.1.9+dfsg-1
+mininet	2.3.0-1.1
+openvswitch-switch	3.3.9-0ubuntu0.24.04.1
+Python: 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+os-ken: 2.11.2
+eventlet: 0.40.4
+pandas: 3.1.0
+numpy: 2.5.4
+matplotlib: 3.11.2

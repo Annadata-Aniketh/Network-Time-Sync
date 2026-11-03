@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
-"""
-OpenFlow 1.3 SDN Controller for Network Time Synchronization System (Project #23)
-PES University - Computer Networks (UE25CS243A)
-Team 11 - Member 2 Deliverable
+"""OpenFlow 1.3 controller: Path A forwarding, edge QoS, and load-based rerouting.
 
-Core Capabilities:
-  1. OpenFlow 1.3 Handshakes & Proactive/Reactive Flow Installation.
-  2. Loop-Free L2 Forwarding & ARP Proxy (eliminates broadcast storms across diamond loops).
-  3. Microflow Classification:
-       - Time-Sync (UDP Port 12300): High-Priority Queue 1 (OFPActionSetQueue(1))
-       - Background Load (Port 5001 / Host 10.0.0.20): Rate-Limited Queue 2 (OFPActionSetQueue(2))
-       - Base Unicast: Best-Effort Queue 0
-  4. Real-Time Port Monitoring & Dynamic Path Rerouting:
-       - Continuously monitors s1 Port 5 (Path A uplink) throughput via OFPPortStatsRequest.
-       - Triggers failover when throughput >= 4.0 Mbps or /tmp/sdn_force_reroute exists.
-       - Pushes Priority 200 rules on s1, s3, and s4 to reroute UDP 12300 onto Path B (s1-s3-s4).
-       - Automatically recovers to Path A when congestion clears for 3 consecutive polling intervals.
-  5. Dual Operating Modes (via SDN_MODE env var or flow_rules.json):
-       - 'baseline': Best-effort routing on Path A without QoS or rerouting.
-       - 'optimized': Microflow classification, strict HTB QoS queues, and dynamic rerouting.
+SDN_MODE selects baseline or optimized. Optimized mode polls s1 port 5 every
+2 seconds, moves UDP 12300 to Path B above 4 Mbps, and restores Path A after
+three consecutive low-load polls. Queue IDs apply only on s1/s4 Path A egress.
 """
 
 import os
@@ -28,16 +13,16 @@ import time
 import logging
 
 try:
-    from ryu.base import app_manager
-    from ryu.controller import ofp_event
-    from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
-    from ryu.ofproto import ofproto_v1_3
-    from ryu.lib.packet import packet, ethernet, ether_types, arp, ipv4, udp, tcp
-    from ryu.lib import hub
+    from os_ken.base import app_manager
+    from os_ken.controller import ofp_event
+    from os_ken.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
+    from os_ken.ofproto import ofproto_v1_3
+    from os_ken.lib.packet import packet, ethernet, ether_types, arp, ipv4, udp, tcp
+    from os_ken.lib import hub
 except ImportError:
-    # Graceful fallback mock classes for local dev / testing on environments without Ryu (e.g. macOS)
+    # Graceful fallback mock classes for local dev / testing on environments without OS-Ken (e.g. macOS)
     class app_manager:
-        class RyuApp:
+        class OSKenApp:
             def __init__(self, *args, **kwargs):
                 self.logger = logging.getLogger("SDNController")
 
@@ -70,15 +55,15 @@ DEFAULT_POLL_INTERVAL = 2.0
 # Deterministic Host Map (IP -> MAC, switch DPID, switch port)
 HOST_MAP = {
     '10.0.0.1':  {'mac': '00:00:00:00:00:01', 'dpid': 4, 'port': 1, 'name': 'h_server'},
-    '10.0.0.2':  {'mac': '00:00:00:00:00:02', 'dpid': 4, 'port': 2, 'name': 'h_bg_server'},
+    '10.0.0.2':  {'mac': '00:00:00:00:00:02', 'dpid': 4, 'port': 2, 'name': 'h_sink'},
     '10.0.0.11': {'mac': '00:00:00:00:00:11', 'dpid': 1, 'port': 1, 'name': 'h_client1'},
     '10.0.0.12': {'mac': '00:00:00:00:00:12', 'dpid': 1, 'port': 2, 'name': 'h_client2'},
     '10.0.0.13': {'mac': '00:00:00:00:00:13', 'dpid': 1, 'port': 3, 'name': 'h_client3'},
-    '10.0.0.20': {'mac': '00:00:00:00:00:20', 'dpid': 1, 'port': 4, 'name': 'h_bg_client'},
+    '10.0.0.20': {'mac': '00:00:00:00:00:20', 'dpid': 1, 'port': 4, 'name': 'h_load'},
 }
 
 
-class TimeSyncSDNController(app_manager.RyuApp):
+class TimeSyncSDNController(app_manager.OSKenApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     HOST_MAP = HOST_MAP
 
@@ -150,6 +135,8 @@ class TimeSyncSDNController(app_manager.RyuApp):
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
         kwargs = {
             "datapath": datapath,
+            # Tag each rule group so recovery deletes only reroute rules.
+            "cookie": priority,
             "priority": priority,
             "match": match,
             "instructions": inst,
@@ -167,6 +154,8 @@ class TimeSyncSDNController(app_manager.RyuApp):
         mod = parser.OFPFlowMod(
             datapath=datapath,
             command=ofproto.OFPFC_DELETE,
+            cookie=priority,
+            cookie_mask=0xffffffffffffffff,
             out_port=ofproto.OFPP_ANY,
             out_group=ofproto.OFPG_ANY,
             priority=priority,
@@ -200,7 +189,7 @@ class TimeSyncSDNController(app_manager.RyuApp):
         else:
             self._install_optimized_flows(datapath)
 
-        # Spawn real-time monitoring thread on Ryu hub once in optimized mode
+        # Spawn real-time monitoring thread on the controller hub once in optimized mode
         if self.mode == "optimized" and not self.monitor_started:
             self.monitor_started = True
             hub.spawn(self._monitor_loop)
@@ -226,7 +215,7 @@ class TimeSyncSDNController(app_manager.RyuApp):
                 self.add_flow(datapath, 10, parser.OFPMatch(eth_type=0x0800, ipv4_dst=cip), [parser.OFPActionOutput(5)])
 
     def _install_optimized_flows(self, datapath):
-        """Optimized Mode: Microflow classification, strict QoS queues, and initial Path A routing."""
+        """Optimized Mode: Microflow classification, HTB QoS queues, and initial Path A routing."""
         parser = datapath.ofproto_parser
         dpid = datapath.id
         q_sync = self.qos_queues.get("high_priority_sync", 1)
@@ -249,18 +238,18 @@ class TimeSyncSDNController(app_manager.RyuApp):
             # Server -> Clients: match udp_src=12300 and destination IP, forward to host ports
             for cip, port in [('10.0.0.11', 1), ('10.0.0.12', 2), ('10.0.0.13', 3)]:
                 m_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port, ipv4_dst=cip)
-                self.add_flow(datapath, 100, m_rev, [parser.OFPActionSetQueue(q_sync), parser.OFPActionOutput(port)])
+                self.add_flow(datapath, 100, m_rev, [parser.OFPActionOutput(port)])
 
         elif dpid == 2:
             m_fwd = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.sync_udp_port)
-            self.add_flow(datapath, 100, m_fwd, [parser.OFPActionSetQueue(q_sync), parser.OFPActionOutput(2)])
+            self.add_flow(datapath, 100, m_fwd, [parser.OFPActionOutput(2)])
 
             m_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port)
-            self.add_flow(datapath, 100, m_rev, [parser.OFPActionSetQueue(q_sync), parser.OFPActionOutput(1)])
+            self.add_flow(datapath, 100, m_rev, [parser.OFPActionOutput(1)])
 
         elif dpid == 4:
             m_fwd = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.sync_udp_port, ipv4_dst='10.0.0.1')
-            self.add_flow(datapath, 100, m_fwd, [parser.OFPActionSetQueue(q_sync), parser.OFPActionOutput(1)])
+            self.add_flow(datapath, 100, m_fwd, [parser.OFPActionOutput(1)])
 
             m_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port)
             self.add_flow(datapath, 100, m_rev, [parser.OFPActionSetQueue(q_sync), parser.OFPActionOutput(5)])
@@ -273,34 +262,31 @@ class TimeSyncSDNController(app_manager.RyuApp):
             m_tcp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_dst=self.bg_port)
             self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
 
-            m_host_bg = parser.OFPMatch(eth_type=0x0800, ipv4_src='10.0.0.20')
-            self.add_flow(datapath, 40, m_host_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
-
         elif dpid == 2:
             m_udp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.bg_port)
-            self.add_flow(datapath, 50, m_udp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(2)])
+            self.add_flow(datapath, 50, m_udp_bg, [parser.OFPActionOutput(2)])
 
             m_tcp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_dst=self.bg_port)
-            self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(2)])
+            self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionOutput(2)])
 
             m_udp_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.bg_port)
-            self.add_flow(datapath, 50, m_udp_rev, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(1)])
+            self.add_flow(datapath, 50, m_udp_rev, [parser.OFPActionOutput(1)])
 
             m_tcp_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_src=self.bg_port)
-            self.add_flow(datapath, 50, m_tcp_rev, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(1)])
+            self.add_flow(datapath, 50, m_tcp_rev, [parser.OFPActionOutput(1)])
 
         elif dpid == 4:
             m_udp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.bg_port, ipv4_dst='10.0.0.2')
-            self.add_flow(datapath, 50, m_udp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(2)])
+            self.add_flow(datapath, 50, m_udp_bg, [parser.OFPActionOutput(2)])
 
             m_tcp_bg = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_dst=self.bg_port, ipv4_dst='10.0.0.2')
-            self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(2)])
+            self.add_flow(datapath, 50, m_tcp_bg, [parser.OFPActionOutput(2)])
 
             m_udp_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.bg_port)
-            self.add_flow(datapath, 50, m_udp_rev, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
+            self.add_flow(datapath, 50, m_udp_rev, [parser.OFPActionOutput(5)])
 
             m_tcp_rev = parser.OFPMatch(eth_type=0x0800, ip_proto=6, tcp_src=self.bg_port)
-            self.add_flow(datapath, 50, m_tcp_rev, [parser.OFPActionSetQueue(q_bg), parser.OFPActionOutput(5)])
+            self.add_flow(datapath, 50, m_tcp_rev, [parser.OFPActionOutput(5)])
 
     # =========================================================================
     # Loop-Free ARP Proxy & Packet-In Handler
@@ -379,19 +365,6 @@ class TimeSyncSDNController(app_manager.RyuApp):
                     req = dp.ofproto_parser.OFPPortStatsRequest(dp, 0, 5)
                     dp.send_msg(req)
 
-                # Check for manual trigger flag file (/tmp/sdn_force_reroute)
-                force_trigger = os.path.exists("/tmp/sdn_force_reroute")
-                if force_trigger and not self.is_rerouted:
-                    self.logger.info(
-                        f"\n============================================================\n"
-                        f"[SDN-CONTROLLER] [SDN-REROUTE] Manual trigger detected via /tmp/sdn_force_reroute!\n"
-                        f"  Action : Rerouting UDP Port {self.sync_udp_port} time-sync microflows to Path B (s1->s3->s4)!\n"
-                        f"============================================================"
-                    )
-                    self.is_rerouted = True
-                    self.low_congestion_count = 0
-                    self._reroute_to_path_b()
-
             except Exception as exc:
                 self.logger.error(f"Error in monitor loop: {exc}")
 
@@ -417,8 +390,7 @@ class TimeSyncSDNController(app_manager.RyuApp):
                         throughput_mbps = (delta_bytes * 8.0) / (delta_time * 1e6)
                         delta_dropped = stat.tx_dropped - prev_dropped
 
-                        force_trigger = os.path.exists("/tmp/sdn_force_reroute")
-                        is_congested = (throughput_mbps >= self.congestion_threshold_mbps) or force_trigger
+                        is_congested = throughput_mbps >= self.congestion_threshold_mbps
 
                         # -----------------------------------------------------
                         # Trigger Reroute: Congestion detected
@@ -427,26 +399,22 @@ class TimeSyncSDNController(app_manager.RyuApp):
                             self.is_rerouted = True
                             self.low_congestion_count = 0
                             self.logger.info(
-                                f"\n============================================================\n"
-                                f"[SDN-CONTROLLER] [SDN-REROUTE] High congestion detected on Path A (s1->s2)!\n"
-                                f"  Current Throughput : {throughput_mbps:.2f} Mbps (Threshold: {self.congestion_threshold_mbps:.1f} Mbps)\n"
-                                f"  Tx Dropped Packets : {delta_dropped}\n"
-                                f"  Action             : Rerouting UDP Port {self.sync_udp_port} time-sync microflows to Path B (s1->s3->s4)!\n"
-                                f"============================================================"
+                                "Path A load %.2f Mbps (threshold %.2f); rerouting sync traffic to Path B. Drops: %s",
+                                throughput_mbps, self.congestion_threshold_mbps, delta_dropped,
                             )
                             self._reroute_to_path_b()
 
                         # -----------------------------------------------------
                         # Recovery: Traffic dropped below threshold for 3 polls
                         # -----------------------------------------------------
+                        elif is_congested:
+                            self.low_congestion_count = 0
                         elif not is_congested and self.is_rerouted:
                             self.low_congestion_count += 1
                             if self.low_congestion_count >= 3:
                                 self.logger.info(
-                                    f"\n============================================================\n"
-                                    f"[SDN-CONTROLLER] Path A congestion cleared ({throughput_mbps:.2f} Mbps < {self.congestion_threshold_mbps:.1f} Mbps for 3 intervals).\n"
-                                    f"  Action             : Restoring UDP Port {self.sync_udp_port} time-sync microflows to Path A (s1->s2->s4).\n"
-                                    f"============================================================"
+                                    "Path A load %.2f Mbps; restoring after three low-load polls.",
+                                    throughput_mbps,
                                 )
                                 self._restore_to_path_a()
                                 self.is_rerouted = False
@@ -454,38 +422,36 @@ class TimeSyncSDNController(app_manager.RyuApp):
 
     def _reroute_to_path_b(self):
         """Pushes Priority 200 rules on s1, s3, s4 to divert UDP 12300 onto Path B."""
-        q_sync = self.qos_queues.get("high_priority_sync", 1)
-
         # 1. Update s1: Send outgoing UDP 12300 out Port 6 (Path B uplink to s3)
         if 1 in self.datapaths:
             dp = self.datapaths[1]
             p = dp.ofproto_parser
             m_fwd = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.sync_udp_port)
-            self.add_flow(dp, 200, m_fwd, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(6)])
+            self.add_flow(dp, 200, m_fwd, [p.OFPActionOutput(6)])
 
             for cip, port in [('10.0.0.11', 1), ('10.0.0.12', 2), ('10.0.0.13', 3)]:
                 m_rev = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port, ipv4_dst=cip)
-                self.add_flow(dp, 200, m_rev, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(port)])
+                self.add_flow(dp, 200, m_rev, [p.OFPActionOutput(port)])
 
         # 2. Update s3 (Path B Core): Forward between Port 1 and Port 2
         if 3 in self.datapaths:
             dp = self.datapaths[3]
             p = dp.ofproto_parser
             m_fwd = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.sync_udp_port)
-            self.add_flow(dp, 200, m_fwd, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(2)])
+            self.add_flow(dp, 200, m_fwd, [p.OFPActionOutput(2)])
 
             m_rev = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port)
-            self.add_flow(dp, 200, m_rev, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(1)])
+            self.add_flow(dp, 200, m_rev, [p.OFPActionOutput(1)])
 
         # 3. Update s4: Send returning UDP 12300 out Port 6 (Path B downlink to s3)
         if 4 in self.datapaths:
             dp = self.datapaths[4]
             p = dp.ofproto_parser
             m_rev = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_src=self.sync_udp_port)
-            self.add_flow(dp, 200, m_rev, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(6)])
+            self.add_flow(dp, 200, m_rev, [p.OFPActionOutput(6)])
 
             m_fwd = p.OFPMatch(eth_type=0x0800, ip_proto=17, udp_dst=self.sync_udp_port, ipv4_dst='10.0.0.1')
-            self.add_flow(dp, 200, m_fwd, [p.OFPActionSetQueue(q_sync), p.OFPActionOutput(1)])
+            self.add_flow(dp, 200, m_fwd, [p.OFPActionOutput(1)])
 
         self.logger.info("[SDN-REROUTE] Pushed Priority 200 FlowMod rules to s1, s3, s4 -> Path B active.")
 

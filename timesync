@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# One entry point; network experiments always run inside the Linux VM.
+set -euo pipefail
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
+ACTION="${1:-run}"
+if [[ $# -gt 0 && "$ACTION" != --* ]]; then shift; fi
+as_root() {
+    if [[ "$EUID" -eq 0 ]]; then "$@"
+    elif command -v sudo >/dev/null 2>&1; then sudo "$@"
+    else echo 'sudo is required to configure the Linux network.' >&2; return 1; fi
+}
+require_linux() {
+    if [[ "$(uname -s)" != Linux ]]; then
+        echo 'Network experiments need a Linux VM (Ubuntu 24.04 or Linux Mint 22).' >&2
+        echo 'The browser lab still works: ./timesync web' >&2
+        exit 1
+    fi
+}
+project_python() {
+    if [[ ! -x .venv/bin/python ]]; then
+        echo 'Project environment is missing. In the Linux VM, run ./timesync setup.' >&2
+        exit 1
+    fi
+}
+case "$ACTION" in
+    help|--help|-h)
+        cat <<'HELP'
+TimeSync — watch three clocks synchronize over a changing network.
+
+  ./timesync                 Set up if needed, then open the terminal demo
+  ./timesync setup           Install or repair Linux VM dependencies
+  ./timesync doctor          Check network tools and controller readiness
+  ./timesync test            Run the Python test suite
+  ./timesync explain         Guided terminal explanation; no network changes
+  ./timesync web [port]      Open the offline clock lab at localhost (default 8080)
+
+Network experiments require Linux and sudo. Setup runs only when needed.
+Batch run: ./timesync --batch --scenario both --duration 60
+HELP
+        ;;
+    web)
+        echo 'Open http://localhost:'"${1:-8080}"' — Ctrl+C stops this local server.'
+        exec python3 -m http.server "${1:-8080}" --bind 127.0.0.1 --directory "$PROJECT_DIR/web"
+        ;;
+    explain)
+        exec python3 -m scripts.demo --explain "$@"
+        ;;
+    setup)
+        require_linux
+        as_root bash scripts/setup_env.sh "$@"
+        ;;
+    test)
+        project_python
+        exec .venv/bin/python -m unittest discover -s tests "$@"
+        ;;
+    doctor)
+        require_linux
+        project_python
+        as_root .venv/bin/python -c 'from evaluation.benchmark import check_environment; check_environment(); print("Ready: Linux, Mininet, OVS, controller imports, and free port 6653.")'
+        ;;
+    run|--*)
+        require_linux
+        if [[ ! -x .venv/bin/python ]] || ! cmp -s requirements.txt .venv/.timesync-requirements; then
+            echo 'Preparing the VM. This first run installs system tools and Python dependencies.'
+            as_root bash scripts/setup_env.sh
+        fi
+        as_root bash scripts/run_demo.sh "$@"
+        ;;
+    *)
+        echo "Unknown action: $ACTION. Run ./timesync --help." >&2
+        exit 2
+        ;;
+esac

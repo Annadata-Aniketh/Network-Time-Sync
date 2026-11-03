@@ -53,7 +53,7 @@ class TimeSyncClient:
         self.seq_num = 0
         self.running = False
         self.csv_path = csv_path or f"data/client_{client_id}_sync.csv"
-        os.makedirs(os.path.dirname(self.csv_path), exist_ok = True)
+        os.makedirs(os.path.dirname(self.csv_path) or ".", exist_ok=True)
         self._init_csv()
         self.method = method
 
@@ -74,14 +74,15 @@ class TimeSyncClient:
         sock.sendto(req_pkt.to_bytes(), (self.server_ip, self.server_port))
 
         try: # analysing response pkt and also check ing for timeouts if any
-            data, _ = sock.recvfrom(2048) # 2048 is the buffer size of reciever window 
+            data, _ = sock.recvfrom(2048) # Maximum datagram bytes to read
             t3 = self.clock.get_time()
             resp_pkt = TimeSyncPacket.from_bytes(data)
-            
-            if resp_pkt.pkt_type != PKT_TYPE_RESPONSE or resp_pkt.seq_num != self.seq_num: # checking pkt for validation(same pkt or different pkt)
-                logging.warning(f"Ignored mismatched response (seq {resp_pkt.seq_num}, expected {self.seq_num})")
-                return
-            
+
+            if (resp_pkt.pkt_type != PKT_TYPE_RESPONSE or resp_pkt.seq_num != self.seq_num
+                    or resp_pkt.client_id != self.client_id or resp_pkt.t0 != t0):
+                # Use the failure path below so this attempt remains in the CSV.
+                raise ValueError('Response type, sequence, client ID, or timestamp does not match request')
+
             delay = calculate_delay(t0, resp_pkt.t1, resp_pkt.t2, t3)
             offset = calculate_offset(t0, resp_pkt.t1, resp_pkt.t2, t3)
 
@@ -94,11 +95,14 @@ class TimeSyncClient:
             )
 
             self._log_to_csv([time.time(), self.client_id, self.seq_num, t0, resp_pkt.t1, resp_pkt.t2, t3, rtt_ms, offset_ms, "SUCCESS"]) # log data to csv
-        
+
+        except ValueError as error:
+            logging.warning("Invalid response: %s", error)
+            self._log_to_csv([time.time(), self.client_id, self.seq_num, t0, 0, 0, 0, 0, 0, "INVALID"])
         except(socket.timeout, TimeoutError): # timeout case
             logging.warning(f"Sync #{self.seq_num} timed out (packet dropped or server unreachable)")
             self._log_to_csv([time.time(), self.client_id, self.seq_num, t0, 0.0, 0.0, 0.0, 0.0, 0.0, "TIMEOUT"]) # log data to csv
-            
+
     def start(self, count: int = 0):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(self.timeout)
@@ -121,7 +125,7 @@ class TimeSyncClient:
             self.running = False
             sock.close()
             logging.info("Client socket closed.")
-    
+
 if __name__ == "__main__": # CLI arguments
     parser = argparse.ArgumentParser(description="UDP Time Synchronization Client")
     parser.add_argument("--server-ip", default="127.0.0.1", help="Server IP address (default: 127.0.0.1)")
@@ -136,7 +140,7 @@ if __name__ == "__main__": # CLI arguments
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    
+
     clock = VirtualClock(initial_offset=args.initial_offset, drift_rate=args.drift_rate)
     client = TimeSyncClient(
         server_ip=args.server_ip,
