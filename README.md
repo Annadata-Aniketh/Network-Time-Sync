@@ -18,7 +18,7 @@ Use a **Linux VM with Ubuntu 24.04 or Linux Mint 22**, Python 3.12, Git, and sud
 A network connection is needed for the first setup. From a terminal:
 
 ```bash
-git clone --branch final https://github.com/Annadata-Aniketh/Network-Time-Sync.git
+git clone --branch main https://github.com/Annadata-Aniketh/Network-Time-Sync.git
 cd Network-Time-Sync
 ./timesync
 ```
