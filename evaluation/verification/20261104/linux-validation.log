@@ -1,0 +1,324 @@
+CHECKOUT=/tmp/timesync-release-20261104.ABAqBj
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.quarantine'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.metadata:kMDItemWhereFroms'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+ENVIRONMENT PASS
+test_each_mismatched_field_records_an_invalid_attempt (test_client.TestClientAccounting.test_each_mismatched_field_records_an_invalid_attempt) ... WARNING:root:Invalid response: Response type, sequence, client ID, or timestamp does not match request
+WARNING:root:Invalid response: Response type, sequence, client ID, or timestamp does not match request
+WARNING:root:Invalid response: Response type, sequence, client ID, or timestamp does not match request
+WARNING:root:Invalid response: Response type, sequence, client ID, or timestamp does not match request
+ok
+test_malformed_reply_and_timeout_each_record_one_failure (test_client.TestClientAccounting.test_malformed_reply_and_timeout_each_record_one_failure) ... WARNING:root:Invalid response: Packet size mismatch: expected 35, got 10
+WARNING:root:Sync #1 timed out (packet dropped or server unreachable)
+ok
+test_rejected_reply_does_not_hide_attempt_or_prevent_next_success (test_client.TestClientAccounting.test_rejected_reply_does_not_hide_attempt_or_prevent_next_success) ... WARNING:root:Invalid response: Response type, sequence, client ID, or timestamp does not match request
+ok
+test_drift_rate_accumulation (test_clock.TestVirtualClock.test_drift_rate_accumulation)
+Verify clock drifts faster than real time when drift_rate > 0. ... ok
+test_initial_offset (test_clock.TestVirtualClock.test_initial_offset)
+Verify initial offset shifts the returned time. ... ok
+test_slew_adjustment_gradual (test_clock.TestVirtualClock.test_slew_adjustment_gradual)
+Verify slew adjustment does not jump instantly, but adjusts over time. ... ok
+test_step_adjustment (test_clock.TestVirtualClock.test_step_adjustment)
+Verify step adjustment instantly shifts virtual time. ... ok
+test_exit_does_not_start_experiment (test_demo.TestDemoMenu.test_exit_does_not_start_experiment) ... ok
+test_invalid_duration_keeps_previous_setting (test_demo.TestDemoMenu.test_invalid_duration_keeps_previous_setting) ... ok
+test_recovery_menu_choice (test_demo.TestDemoMenu.test_recovery_menu_choice) ... ok
+test_scenario_dispatch_in_interactive_and_plain_modes (test_demo.TestDemoMenu.test_scenario_dispatch_in_interactive_and_plain_modes) ... ok
+test_select_baseline_does_not_run_plots (test_demo.TestDemoMenu.test_select_baseline_does_not_run_plots) ... ok
+test_csv_schema_and_phase_boundaries (test_evaluation.TestBenchmarkMeasurements.test_csv_schema_and_phase_boundaries) ... ok
+test_invalid_response_does_not_adjust_clock (test_evaluation.TestBenchmarkMeasurements.test_invalid_response_does_not_adjust_clock) ... ok
+test_no_non_linux_fallback (test_evaluation.TestBenchmarkMeasurements.test_no_non_linux_fallback) ... ok
+test_timeout_has_no_fabricated_delay (test_evaluation.TestBenchmarkMeasurements.test_timeout_has_no_fabricated_delay) ... ok
+test_valid_response_math_and_correction (test_evaluation.TestBenchmarkMeasurements.test_valid_response_math_and_correction) ... ok
+test_failed_pair_is_logged_and_reported (test_evaluation.TestConnectivityDiagnostics.test_failed_pair_is_logged_and_reported) ... ok
+test_exited_controller_is_reported_immediately (test_evaluation.TestControllerStartup.test_exited_controller_is_reported_immediately) ... ok
+test_listener_wait_has_a_deadline (test_evaluation.TestControllerStartup.test_listener_wait_has_a_deadline) ... ok
+test_live_listener_is_rejected_but_closed_connection_can_be_reused (test_evaluation.TestControllerStartup.test_live_listener_is_rejected_but_closed_connection_can_be_reused) ... ok
+test_waits_through_refused_connections (test_evaluation.TestControllerStartup.test_waits_through_refused_connections) ... ok
+test_failed_build_stops_partial_network_and_controller (test_evaluation.TestMininetStartupCleanup.test_failed_build_stops_partial_network_and_controller) ... ok
+test_phase_label_for_recovery (test_evaluation.TestRecoveryEvidence.test_phase_label_for_recovery) ... ok
+test_recovery_requires_all_packet_evidence (test_evaluation.TestRecoveryEvidence.test_recovery_requires_all_packet_evidence) ... ok
+test_short_recovery_test_rejected_before_startup (test_evaluation.TestRecoveryEvidence.test_short_recovery_test_rejected_before_startup) ... ok
+test_convergence_requires_all_clients_and_successful_rounds (test_evaluation.TestResults.test_convergence_requires_all_clients_and_successful_rounds) ... ok
+test_legacy_results_require_provenance (test_evaluation.TestResults.test_legacy_results_require_provenance) ... ok
+test_summary_excludes_failed_delay_and_reports_failures (test_evaluation.TestResults.test_summary_excludes_failed_delay_and_reports_failures) ... ok
+test_unconfirmed_convergence_is_unavailable (test_evaluation.TestResults.test_unconfirmed_convergence_is_unavailable) ... ok
+test_benchmark_sample_with_real_server (test_integration.TestTimeSyncIntegration.test_benchmark_sample_with_real_server) ... ok
+test_client_server_slew_sync (test_integration.TestTimeSyncIntegration.test_client_server_slew_sync)
+Verify client connects to server and runs slew adjustment without crashing. ... ok
+test_client_server_step_sync (test_integration.TestTimeSyncIntegration.test_client_server_step_sync)
+Verify client connects to server and converges using step adjustment. ... ok
+test_batch_arguments_reach_demo_unchanged (test_launcher.TestLauncher.test_batch_arguments_reach_demo_unchanged) ... ok
+test_failed_setup_does_not_launch_or_write_success_marker (test_launcher.TestLauncher.test_failed_setup_does_not_launch_or_write_success_marker) ... ok
+test_first_launch_installs_then_runs_and_later_launch_reuses_setup (test_launcher.TestLauncher.test_first_launch_installs_then_runs_and_later_launch_reuses_setup) ... ok
+test_help_and_unknown_action_do_not_install (test_launcher.TestLauncher.test_help_and_unknown_action_do_not_install) ... ok
+test_tests_without_environment_explain_how_to_set_up (test_launcher.TestLauncher.test_tests_without_environment_explain_how_to_set_up) ... ok
+test_unsupported_os_does_not_attempt_installation (test_launcher.TestLauncher.test_unsupported_os_does_not_attempt_installation) ... ok
+test_impossible_or_overflowing_timestamp_math_is_rejected (test_protocol.TestTimeSyncProtocol.test_impossible_or_overflowing_timestamp_math_is_rejected) ... ok
+test_invalid_packet_handling (test_protocol.TestTimeSyncProtocol.test_invalid_packet_handling)
+Verify malformed or corrupted packets raise ValueError. ... ok
+test_mathematical_formulas (test_protocol.TestTimeSyncProtocol.test_mathematical_formulas)
+Verify RTT Delay and Clock Offset formulas against hand calculations. ... ok
+test_non_finite_timestamps_are_rejected_at_the_wire (test_protocol.TestTimeSyncProtocol.test_non_finite_timestamps_are_rejected_at_the_wire) ... ok
+test_packet_pack_unpack_roundtrip (test_protocol.TestTimeSyncProtocol.test_packet_pack_unpack_roundtrip)
+Verify packet serialization to exact 35 bytes and unpack integrity. ... ok
+test_repr_formatting (test_protocol.TestTimeSyncProtocol.test_repr_formatting)
+Verify string representation of packet. ... ok
+test_response_packet_roundtrip (test_protocol.TestTimeSyncProtocol.test_response_packet_roundtrip)
+Verify full response packet with all 3 timestamps intact. ... ok
+test_completed_runs_are_reviewed_without_calling_failures_packet_loss (test_run_review.TestRunReview.test_completed_runs_are_reviewed_without_calling_failures_packet_loss) ... ok
+test_legacy_data_without_metadata_is_not_used (test_run_review.TestRunReview.test_legacy_data_without_metadata_is_not_used) ... ok
+test_congestion_installs_path_b_rules (test_sdn_topology.TestControllerRecovery.test_congestion_installs_path_b_rules) ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+INFO:TimeSyncSDNController:Path A load 8.00 Mbps (threshold 4.00); rerouting sync traffic to Path B. Drops: 0
+ok
+test_delete_is_restricted_to_reroute_cookie (test_sdn_topology.TestControllerRecovery.test_delete_is_restricted_to_reroute_cookie) ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+ok
+test_recovery_requires_consecutive_low_load_polls (test_sdn_topology.TestControllerRecovery.test_recovery_requires_consecutive_low_load_polls) ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+INFO:TimeSyncSDNController:Path A load 0.00 Mbps; restoring after three low-load polls.
+ok
+test_all_host_pairs_reachable_in_both_modes (test_sdn_topology.TestIPv4Forwarding.test_all_host_pairs_reachable_in_both_modes) ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+ok
+test_controller_modes (test_sdn_topology.TestSDNController.test_controller_modes)
+Verify controller operates in baseline and optimized modes. ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: baseline]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+ok
+test_flow_rules_json (test_sdn_topology.TestSDNController.test_flow_rules_json)
+Verify sdn/flow_rules.json conforms to configuration schema. ... ok
+test_host_map (test_sdn_topology.TestSDNController.test_host_map)
+Verify static host map for loop-free ARP resolution. ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+ok
+test_reroute_and_restore (test_sdn_topology.TestSDNController.test_reroute_and_restore)
+Verify reroute to Path B and restore to Path A execute cleanly. ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+INFO:TimeSyncSDNController:Initialized TimeSyncSDNController [Mode: optimized]
+INFO:TimeSyncSDNController:Policy: Time-Sync Port=12300, BG Port=5001, Threshold=4.0 Mbps, Poll=2.0s
+INFO:TimeSyncSDNController:[SDN-REROUTE] Pushed Priority 200 FlowMod rules to s1, s3, s4 -> Path B active.
+INFO:TimeSyncSDNController:[SDN-REROUTE] Cleared Priority 200 FlowMod rules. Primary Path A restored.
+ok
+test_clearing_impairment_requires_running_network (test_sdn_topology.TestTimeSyncTopology.test_clearing_impairment_requires_running_network) ... ok
+test_clearing_impairment_restores_original_link_limits (test_sdn_topology.TestTimeSyncTopology.test_clearing_impairment_restores_original_link_limits) ... ok
+test_deterministic_ports_s1 (test_sdn_topology.TestTimeSyncTopology.test_deterministic_ports_s1)
+Verify deterministic switch port mapping on switch s1. ... ok
+test_deterministic_ports_s4 (test_sdn_topology.TestTimeSyncTopology.test_deterministic_ports_s4)
+Verify deterministic switch port mapping on switch s4. ... ok
+test_helper_functions_callable (test_sdn_topology.TestTimeSyncTopology.test_helper_functions_callable)
+Verify topology helper functions exist and are callable. ... ok
+test_host_addressing (test_sdn_topology.TestTimeSyncTopology.test_host_addressing)
+Verify deterministic IP and MAC assignments. ... ok
+test_host_interfaces_fit_linux_name_limit (test_sdn_topology.TestTimeSyncTopology.test_host_interfaces_fit_linux_name_limit) ... ok
+test_hosts (test_sdn_topology.TestTimeSyncTopology.test_hosts)
+Verify the 6 hosts (3 clients, 1 server, 2 background). ... ok
+test_link_parameters (test_sdn_topology.TestTimeSyncTopology.test_link_parameters)
+Verify bandwidth, delay, and queue constraints on Core Paths. ... ok
+test_link_shaping_uses_hfsc (test_sdn_topology.TestTimeSyncTopology.test_link_shaping_uses_hfsc) ... ok
+test_switch_dpids (test_sdn_topology.TestTimeSyncTopology.test_switch_dpids)
+Verify fixed OpenFlow 1.3 DPIDs for s1-s4. ... ok
+test_switches (test_sdn_topology.TestTimeSyncTopology.test_switches)
+Verify the 4 switches in the diamond topology. ... ok
+test_hostname_is_resolved_once_for_send_and_peer_check (test_security.TestClientPeerValidation.test_hostname_is_resolved_once_for_send_and_peer_check) ... ok
+test_invalid_client_settings_do_not_create_output (test_security.TestClientPeerValidation.test_invalid_client_settings_do_not_create_output) ... ok
+test_invalid_clock_values_cannot_poison_corrections (test_security.TestClientPeerValidation.test_invalid_clock_values_cannot_poison_corrections) ... ok
+test_matching_packet_from_wrong_address_never_adjusts_clock (test_security.TestClientPeerValidation.test_matching_packet_from_wrong_address_never_adjusts_clock) ... WARNING:root:Invalid response: Response did not come from the configured reference server
+WARNING:root:Invalid response: Response did not come from the configured reference server
+ok
+test_invalid_polling_cannot_start_a_tight_loop (test_security.TestControllerSettings.test_invalid_polling_cannot_start_a_tight_loop) ... ok
+test_unknown_mode_is_rejected (test_security.TestControllerSettings.test_unknown_mode_is_rejected) ... INFO:TimeSyncSDNController:Loaded flow rules configuration from: /tmp/timesync-release-20261104.ABAqBj/sdn/flow_rules.json
+ok
+test_default_listener_is_loopback (test_security.TestServerAdmission.test_default_listener_is_loopback) ... ok
+test_invalid_datagrams_never_enter_the_worker_pool (test_security.TestServerAdmission.test_invalid_datagrams_never_enter_the_worker_pool) ... ok
+test_invalid_worker_limits_fail_before_startup (test_security.TestServerAdmission.test_invalid_worker_limits_fail_before_startup) ... ok
+test_overload_is_dropped_and_capacity_is_reusable (test_security.TestServerAdmission.test_overload_is_dropped_and_capacity_is_reusable) ... ok
+test_worker_failure_releases_capacity (test_security.TestServerAdmission.test_worker_failure_releases_capacity) ... ok
+test_fractional_load_does_not_become_unlimited_iperf (test_security.TestTrafficSafety.test_fractional_load_does_not_become_unlimited_iperf) ... ok
+test_fractional_rate_is_preserved_by_the_background_helper (test_security.TestTrafficSafety.test_fractional_rate_is_preserved_by_the_background_helper) ... ok
+test_invalid_rates_and_sizes_fail_before_socket_creation (test_security.TestTrafficSafety.test_invalid_rates_and_sizes_fail_before_socket_creation) ... ok
+test_topology_commands_never_use_a_shell (test_security.TestTrafficSafety.test_topology_commands_never_use_a_shell) ... ok
+test_refresh_preserves_deadline_without_oversleeping (test_terminal.TestDemoSchedule.test_refresh_preserves_deadline_without_oversleeping) ... ok
+test_guided_walkthrough_can_go_back_and_quit_without_starting_network (test_terminal.TestTerminal.test_guided_walkthrough_can_go_back_and_quit_without_starting_network) ... ok
+test_live_frame_reads_samples_and_controller_recovery (test_terminal.TestTerminal.test_live_frame_reads_samples_and_controller_recovery) ... ok
+test_log_handler_is_restored_after_failure (test_terminal.TestTerminal.test_log_handler_is_restored_after_failure) ... ok
+test_phase_cues_explain_what_is_changing (test_terminal.TestTerminal.test_phase_cues_explain_what_is_changing) ... ok
+test_plain_explanation_is_labeled_and_does_not_sleep (test_terminal.TestTerminal.test_plain_explanation_is_labeled_and_does_not_sleep) ... ok
+test_result_takeaway_handles_worse_and_unavailable_results (test_terminal.TestTerminal.test_result_takeaway_handles_worse_and_unavailable_results) ... ok
+test_result_takeaway_reports_slower_convergence_honestly (test_terminal.TestTerminal.test_result_takeaway_reports_slower_convergence_honestly) ... ok
+test_summary_keeps_metric_table_before_its_notes (test_terminal.TestTerminal.test_summary_keeps_metric_table_before_its_notes) ... ok
+test_unterminated_csv_row_is_not_presented_as_complete (test_terminal.TestTerminal.test_unterminated_csv_row_is_not_presented_as_complete) ... ok
+test_wrapped_frame_counts_every_physical_line (test_terminal.TestTerminal.test_wrapped_frame_counts_every_physical_line) ... ok
+
+----------------------------------------------------------------------
+Ran 94 tests in 2.529s
+
+OK
+{
+  "passed": true,
+  "checks": {
+    "recovered": true,
+    "bounded": true,
+    "drained": true,
+    "no_worker_errors": true,
+    "malformed_rejected": true,
+    "expected_load_behavior": true
+  },
+  "clients": 32,
+  "requests_per_client": 200,
+  "attempts": 6400,
+  "successes": 6400,
+  "failures": 0,
+  "duration_sec": 20.344105277999915,
+  "successful_requests_per_sec": 314.58744007390436,
+  "mean_rtt_ms": 99.84914582140684,
+  "p95_rtt_ms": 135.63802999999552,
+  "workers": 4,
+  "max_pending": 128,
+  "worker_delay_ms": 0,
+  "expect_overload": false,
+  "server": {
+    "accepted": 6401,
+    "invalid": 500,
+    "overloaded": 0,
+    "pending": 0,
+    "peak_pending": 36,
+    "errors": 0
+  }
+}
+{
+  "passed": true,
+  "checks": {
+    "recovered": true,
+    "bounded": true,
+    "drained": true,
+    "no_worker_errors": true,
+    "malformed_rejected": true,
+    "expected_load_behavior": true
+  },
+  "clients": 64,
+  "requests_per_client": 10,
+  "attempts": 640,
+  "successes": 72,
+  "failures": 568,
+  "duration_sec": 6.991384225000047,
+  "successful_requests_per_sec": 10.298389801341452,
+  "mean_rtt_ms": 47.59276568054658,
+  "p95_rtt_ms": 115.69464399997287,
+  "workers": 4,
+  "max_pending": 8,
+  "worker_delay_ms": 5.0,
+  "expect_overload": true,
+  "server": {
+    "accepted": 136,
+    "invalid": 500,
+    "overloaded": 217,
+    "pending": 0,
+    "peak_pending": 8,
+    "errors": 0
+  }
+}
+Saving logs and evidence to /tmp/timesync-release-20261104.ABAqBj/evaluation/runs/release-comparison
+Connectivity: 30/30 host pairs reachable
+baseline: Phase 1: Normal
+baseline: Phase 2: iperf Congestion
+baseline: Phase 3: NetEm Delay+Jitter
+QoS ready on s1-eth5: default / sync / background queues
+QoS ready on s4-eth5: default / sync / background queues
+Connectivity: 30/30 host pairs reachable
+optimized: Phase 1: Normal
+optimized: Phase 2: iperf Congestion
+optimized: Phase 3: NetEm Delay+Jitter
+Results: /tmp/timesync-release-20261104.ABAqBj/evaluation/runs/release-comparison
+# Time synchronization results
+
+| Metric | Baseline Mode | SDN-Optimized Mode | Reduction (%) |
+| --- | ---: | ---: | ---: |
+| Mean RTT (ms) | 103.349 | 20.559 | +80.11% |
+| P95 RTT (ms) | 210.027 | 32.113 | +84.71% |
+| Mean Jitter (ms) | 4.939 | 2.847 | +42.34% |
+| Mean Clock Error (ms) | 50.457 | 0.856 | +98.30% |
+| P95 Clock Error (ms) | 115.103 | 2.257 | +98.04% |
+| Convergence Time (s) | 1.502 | 1.502 | +0.02% |
+| Failed samples (%) | 20.728 | 0.000 | +100.00% |
+
+RTT and jitter use successful replies only. Clock error includes failed attempts.
+Clock error is sampled immediately after correction, not continuously between requests.
+Convergence requires three successive rounds with all clients at or below 2 ms.
+N/A means unavailable or not confirmed. Positive reduction means a lower measured value.
+Use controller logs and flow counters to verify rerouting; these plots do not establish when it happened.
+
+Plots: evaluation/runs/release-comparison/plots
+Saving logs and evidence to /tmp/timesync-release-20261104.ABAqBj/evaluation/runs/release-recovery
+QoS ready on s1-eth5: default / sync / background queues
+QoS ready on s4-eth5: default / sync / background queues
+Connectivity: 30/30 host pairs reachable
+optimized: Phase 1: Normal
+optimized: Phase 2: iperf Congestion
+optimized: Phase 3: Recovery (load stopped)
+Load stopped; waiting for automatic Path A recovery.
+# Automatic recovery: PASS
+
+- PASS: Sync requests used Path B under load
+- PASS: Reroute rules removed from s1, s3, and s4
+- PASS: Sync request counter increased on Path A after load stopped
+- PASS: All three clients received replies during recovery
+
+Results: /tmp/timesync-release-20261104.ABAqBj/evaluation/runs/release-recovery
+CLEANUP PASS
+LIVE VM VERIFICATION PASS
+VERIFICATION_EXIT=0

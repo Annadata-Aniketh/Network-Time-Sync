@@ -1,11 +1,12 @@
-import unittest
-import threading
 import os
 import socket
 import tempfile
-from evaluation.sync_worker import sample
-from app.server import TimeServer
+import threading
+import unittest
+
 from app.client import TimeSyncClient, VirtualClock
+from app.server import TimeServer
+from evaluation.sync_worker import sample
 
 
 class TestTimeSyncIntegration(unittest.TestCase):
@@ -15,7 +16,7 @@ class TestTimeSyncIntegration(unittest.TestCase):
         cls.server_thread = threading.Thread(target=cls.server.start, daemon=True)
         cls.server_thread.start()
         if not cls.server.ready.wait(timeout=3) or not cls.server.running:
-            raise RuntimeError('Test server did not start')
+            raise RuntimeError("Test server did not start")
         cls.test_port = cls.server.port
 
     @classmethod
@@ -23,7 +24,7 @@ class TestTimeSyncIntegration(unittest.TestCase):
         cls.server.running = False
         cls.server_thread.join(timeout=3)
         if cls.server_thread.is_alive():
-            raise RuntimeError('Test server did not stop')
+            raise RuntimeError("Test server did not stop")
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -33,14 +34,14 @@ class TestTimeSyncIntegration(unittest.TestCase):
         self.directory.cleanup()
 
     def test_benchmark_sample_with_real_server(self):
-        clock = VirtualClock(initial_offset=.1, drift_rate=0)
+        clock = VirtualClock(initial_offset=0.1, drift_rate=0)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.settimeout(1)
-            sock.connect(('127.0.0.1', self.test_port))
+            sock.connect(("127.0.0.1", self.test_port))
             row = sample(sock, clock, client_id=1, seq=1)
-        self.assertEqual(row['status'], 'SUCCESS')
-        self.assertGreaterEqual(row['rtt_ms'], 0)
-        self.assertLess(row['true_residual_error_ms'], 30)
+        self.assertEqual(row["status"], "SUCCESS")
+        self.assertGreaterEqual(row["rtt_ms"], 0)
+        self.assertLess(row["true_residual_error_ms"], 30)
 
     def test_client_server_step_sync(self):
         """Verify client connects to server and converges using step adjustment."""
@@ -56,15 +57,14 @@ class TestTimeSyncIntegration(unittest.TestCase):
             method="step",
         )
 
-        # Run 3 sync cycles
         client.start(count=3)
 
         self.assertTrue(os.path.exists(csv_file))
         with open(csv_file) as f:
             lines = f.readlines()
-            # 1 header + 3 sync rows
+
             self.assertEqual(len(lines), 4)
-            # Verify status in rows is SUCCESS
+
             for row in lines[1:]:
                 self.assertIn("SUCCESS", row)
 

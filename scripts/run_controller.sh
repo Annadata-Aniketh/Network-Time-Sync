@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Script: run_controller.sh
-# Purpose: Launch OS-Ken OpenFlow 1.3 Controller for Network Time Synchronization
-# Course: UE25CS243A - Computer Networks (Team 11 - Project #23)
-# ==============================================================================
+# Launch the OS-Ken controller with the selected forwarding policy.
 
 set -eo pipefail
 
@@ -73,4 +69,4 @@ PYTHON_CMD=python3
 if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
   PYTHON_CMD="$REPO_ROOT/.venv/bin/python"
 fi
-exec "$PYTHON_CMD" -m sdn.run_controller --ofp-tcp-listen-port "$PORT" $VERBOSE "$CONTROLLER_APP"
+exec "$PYTHON_CMD" -m sdn.run_controller --ofp-listen-host 127.0.0.1 --ofp-tcp-listen-port "$PORT" $VERBOSE "$CONTROLLER_APP"
