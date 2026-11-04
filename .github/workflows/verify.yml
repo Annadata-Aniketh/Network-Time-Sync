@@ -1,0 +1,55 @@
+name: Verify TimeSync
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install Linux runtime and development checks
+        run: |
+          sudo bash scripts/setup_env.sh
+          sudo .venv/bin/python -m pip install -r requirements-dev.txt
+          npm ci --ignore-scripts
+      - name: Static analysis and dependency audits
+        run: |
+          .venv/bin/ruff check app evaluation scripts sdn topology tests
+          .venv/bin/ruff format --check app evaluation scripts sdn topology tests
+          .venv/bin/bandit -r app evaluation scripts sdn topology -ll
+          .venv/bin/shellcheck timesync scripts/*.sh
+          .venv/bin/pip-audit -r requirements-dev.txt
+          npm run lint
+          npm audit
+      - name: Unit, integration, and regression suites
+        run: |
+          ./timesync test
+          npm test
+          .venv/bin/python -m evaluation.audit_results
+      - name: Concurrent requests and controlled overload
+        run: |
+          .venv/bin/python -m evaluation.load_test --output evaluation/runs/load-normal.json
+          .venv/bin/python -m evaluation.load_test --clients 64 --requests 10 --max-pending 8 --timeout .1 --worker-delay-ms 5 --expect-overload --output evaluation/runs/load-overload.json
+      - name: Live Mininet comparison and recovery
+        run: |
+          sudo .venv/bin/python -m evaluation.benchmark --scenario both --duration 60 --output-dir evaluation/runs/ci-comparison
+          sudo .venv/bin/python -m evaluation.plot_results --data-dir evaluation/runs/ci-comparison
+          sudo .venv/bin/python -m evaluation.benchmark --scenario recovery --duration 60 --output-dir evaluation/runs/ci-recovery
+      - name: Upload measurements and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timesync-verification
+          path: evaluation/runs/

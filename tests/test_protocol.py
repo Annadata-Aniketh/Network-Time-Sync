@@ -1,10 +1,10 @@
 import unittest
+
 from app.protocol import (
-    TimeSyncPacket,
+    PACKET_SIZE,
     PKT_TYPE_REQUEST,
     PKT_TYPE_RESPONSE,
-    PACKET_SIZE,
-    DEFAULT_PORT,
+    TimeSyncPacket,
     calculate_delay,
     calculate_offset,
 )
@@ -49,11 +49,10 @@ class TestTimeSyncProtocol(unittest.TestCase):
 
     def test_invalid_packet_handling(self):
         """Verify malformed or corrupted packets raise ValueError."""
-        # Truncated packet
+
         with self.assertRaises(ValueError):
             TimeSyncPacket.from_bytes(b"too_short")
 
-        # Corrupt magic number
         valid_pkt = TimeSyncPacket(PKT_TYPE_REQUEST, client_id=1, seq_num=1, t0=10.0)
         corrupted = b"XXXX" + valid_pkt.to_bytes()[4:]
         with self.assertRaises(ValueError):
@@ -66,25 +65,27 @@ class TestTimeSyncProtocol(unittest.TestCase):
         t2 = 10.06
         t3 = 10.13
 
-        # Delay = (t3 - t0) - (t2 - t1) = (10.13 - 10.00) - (10.06 - 10.05) = 0.12
         delay = calculate_delay(t0, t1, t2, t3)
         self.assertAlmostEqual(delay, 0.12, places=6)
 
-        # Offset = ((t1 - t0) + (t2 - t3)) / 2 = ((0.05) + (-0.07)) / 2 = -0.01
         offset = calculate_offset(t0, t1, t2, t3)
         self.assertAlmostEqual(offset, -0.01, places=6)
 
     def test_non_finite_timestamps_are_rejected_at_the_wire(self):
-        for stamp in [float('nan'), float('inf'), -float('inf')]:
-            for field in ['t0', 't1', 't2']:
+        for stamp in [float("nan"), float("inf"), -float("inf")]:
+            for field in ["t0", "t1", "t2"]:
                 with self.subTest(stamp=stamp, field=field):
                     packet = TimeSyncPacket(PKT_TYPE_RESPONSE, 1, 1, **{field: stamp})
-                    with self.assertRaisesRegex(ValueError, 'finite'):
+                    with self.assertRaisesRegex(ValueError, "finite"):
                         TimeSyncPacket.from_bytes(packet.to_bytes())
 
     def test_impossible_or_overflowing_timestamp_math_is_rejected(self):
-        for timestamps in [(10, 10.05, 10.06, 10.005), (10, 10.06, 10.05, 10.13),
-                           (0, 0, 0, float('nan')), (-1e308, 0, 0, 1e308)]:
+        for timestamps in [
+            (10, 10.05, 10.06, 10.005),
+            (10, 10.06, 10.05, 10.13),
+            (0, 0, 0, float("nan")),
+            (-1e308, 0, 0, 1e308),
+        ]:
             with self.subTest(timestamps=timestamps), self.assertRaises(ValueError):
                 calculate_delay(*timestamps)
         with self.assertRaises(ValueError):

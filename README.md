@@ -4,6 +4,14 @@ Watch three drifting clocks synchronize over UDP, then see how a busy network
 changes the result. TimeSync compares ordinary forwarding with prioritized
 traffic and automatic path changes in a Linux Mininet network.
 
+## Project documents
+
+- [Project presentation (PDF)](docs/TimeSync%20-%20Project%2023.pdf)
+- [Demo commands (PDF)](docs/Time%20Sync-Commands.pdf) and [copyable demo guide](docs/DEMO.md)
+- [Project report (PDF)](docs/Network_Time_Sync_Project_Report.pdf) / [editable Word report](docs/Network_Time_Sync_Project_Report.docx)
+- [Full network topology (PNG)](assets/timesync-topology.png)
+- [Documentation index](docs/README.md) and [final verification](docs/VERIFICATION.md)
+
 ## Try it in three steps
 
 Use a **Linux VM with Ubuntu 24.04 or Linux Mint 22**, Python 3.12, Git, and sudo.
@@ -48,7 +56,7 @@ Other controls: `1` checks the environment, `2` / `3` run a single mode,
 
 ## What happens on the network
 
-![TimeSync architecture: OS-Ken controls four switches; Path A passes through s2 at 10 Mbps and Path B through s3 at 50 Mbps](assets/architecture.svg)
+![TimeSync topology with host addresses and switch ports: OS-Ken controls four switches; Path A passes through s2 at 10 Mbps and Path B through s3 at 50 Mbps](assets/timesync-topology.png)
 
 Each comparison mode runs three phases: normal synchronization, UDP background
 load, then load plus 50 ms delay and 15 ms jitter on Path A. Baseline stays on A.
@@ -67,7 +75,7 @@ request counter, and replies to all three clients during recovery.
 ## Use it in your workspace
 
 Keep `app/protocol.py` and `app/client.py` for the timestamp exchange and virtual
-clock; run `python3 -m app.server` on your reference host and
+clock; run `python3 -m app.server --host <reference-IP>` on your reference host and
 `python3 -m app.client --server-ip <reference-IP> --count 10` on a client. Allow
 UDP 12300 between them. This demonstrates virtual clock correction, not OS time
 synchronization. Reusing the network optimization also requires the OpenFlow
@@ -100,6 +108,16 @@ Each pair shows one run's mean. The graph uses the
 Recalculate them with `.venv/bin/python -m evaluation.audit_results`. Export new
 VM results with `sudo bash scripts/export_results.sh`. The website has
 separate, dependency-free tests: `node --test tests/clock-model.test.cjs`.
+Node.js is optional and is not installed by VM setup.
+
+Batch runs save measurements but do not generate comparison plots automatically.
+Use menu option `5`, or run:
+
+```bash
+.venv/bin/python -m evaluation.plot_results --data-dir evaluation/runs/<run>
+```
+
+Use a completed `both` run for plots. Recovery writes its own PASS/FAIL summary.
 
 ## If something fails
 
@@ -113,3 +131,14 @@ separate, dependency-free tests: `node --test tests/clock-model.test.cjs`.
 
 `app/` holds clocks and UDP messages, `sdn/` the controller, `topology/` the network,
 `evaluation/` measurements and evidence, `scripts/` the CLI, and `web/` the browser lab.
+
+## Development checks
+
+See [testing and load checks](docs/TESTING.md) for the Python and browser suites,
+Ruff, ESLint, ShellCheck, Bandit, dependency audits, and the Linux VM workflow.
+GitHub Actions runs these checks on pull requests. The offline browser lab has
+no runtime npm dependencies; Node.js 24 is needed only for its development tools.
+
+The server defaults to loopback and admits at most 128 active or queued requests.
+Remote clients require an explicit bind address. See the [security scope](SECURITY.md)
+for the protections and the limits of this laboratory protocol.

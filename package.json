@@ -1,0 +1,21 @@
+{
+  "name": "timesync-browser-lab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Development checks for the offline TimeSync browser lab",
+  "scripts": {
+    "test": "node --test tests/clock-model.test.cjs",
+    "lint": "eslint web tests/clock-model.test.cjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "globals": "17.14.0"
+  },
+  "overrides": {
+    "minimatch": "11.0.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

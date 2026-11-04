@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "checks": {
+    "recovered": true,
+    "bounded": true,
+    "drained": true,
+    "no_worker_errors": true,
+    "malformed_rejected": true,
+    "expected_load_behavior": true
+  },
+  "clients": 32,
+  "requests_per_client": 200,
+  "timeout_sec": 2,
+  "attempts": 6400,
+  "successes": 6400,
+  "failures": 0,
+  "duration_sec": 0.9363607020000018,
+  "successful_requests_per_sec": 6834.9728756557615,
+  "mean_rtt_ms": 4.555599102810248,
+  "p95_rtt_ms": 7.082133000039903,
+  "workers": 4,
+  "max_pending": 128,
+  "worker_delay_ms": 0,
+  "expect_overload": false,
+  "server": {
+    "accepted": 6401,
+    "invalid": 500,
+    "overloaded": 0,
+    "pending": 0,
+    "peak_pending": 32,
+    "errors": 0
+  }
+}

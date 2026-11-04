@@ -6,5 +6,5 @@ eventlet.monkey_patch()
 
 from os_ken.cmd.manager import main
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
